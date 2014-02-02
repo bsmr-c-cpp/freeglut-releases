@@ -35,6 +35,7 @@ void PrintText( int nX, int nY, char* pszText )
     /*
      * Prepare the OpenGL state
      */
+    glDisable( GL_LIGHTING );
     glDisable( GL_DEPTH_TEST );   
     glMatrixMode( GL_PROJECTION );
     glPushMatrix();
@@ -44,8 +45,8 @@ void PrintText( int nX, int nY, char* pszText )
      * Have an orthogonal projection matrix set
      */
     glOrtho( 0, glutGet( GLUT_WINDOW_WIDTH ),
-	     0, glutGet( GLUT_WINDOW_HEIGHT ),
-	     -1, +1
+             0, glutGet( GLUT_WINDOW_HEIGHT ),
+             -1, +1
     );
 
     /*
@@ -56,22 +57,22 @@ void PrintText( int nX, int nY, char* pszText )
     glLoadIdentity();
     
     /*
-     * Now the main text	
+     * Now the main text        
      */
     glColor3ub( 0, 0, 0 ); 
     glRasterPos2i( nX, nY ); 
 
     for( p=pszText, lines=0; *p; p++ )
     {
-		if( *p == '\n' )
-		{
-			lines++;
-			glRasterPos2i( nX, nY-(lines*18) );
-		}
-		
-		glutBitmapCharacter( GLUT_BITMAP_HELVETICA_18,  *p );
+        if( *p == '\n' )
+        {
+            lines++;
+            glRasterPos2i( nX, nY-(lines*18) );
+        }
+        
+        glutBitmapCharacter( GLUT_BITMAP_HELVETICA_18,  *p );
     }
-	
+        
     /*
      * Revert to the old matrix modes
      */   
@@ -86,6 +87,7 @@ void PrintText( int nX, int nY, char* pszText )
      */
     glColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
     glEnable( GL_DEPTH_TEST );
+    glEnable( GL_LIGHTING );
 }     
 
 /*
@@ -115,8 +117,8 @@ void SampleDisplay( void )
      * And then drawn...
      */
     glColor3f( 1, 1, 0 );
-	//glutWireCube( 20.0 );
-	glutWireTeapot( 20.0 );
+    //glutWireCube( 20.0 );
+    glutWireTeapot( 20.0 );
     //glutWireSpher( 15.0, 15, 15 );
     //glColor3f( 0, 1, 0 );
     //glutWireCube( 30.0 );
@@ -125,20 +127,20 @@ void SampleDisplay( void )
     /*
      * Don't forget about the model-view matrix
      */
-    glPopMatrix();
+    glPopMatrix( );
 
     /*
      * Draw a silly text
      */
     if( g_InGameMode == 0 ) 
-	PrintText( 20, 20, "Hello there cruel world!" );
+        PrintText( 20, 20, "Hello there cruel world!" );
     else
-	PrintText( 20, 20, "Press ESC to leave the game mode!" ); 
+        PrintText( 20, 20, "Press ESC to leave the game mode!" ); 
 
     /*
      * And swap this context's buffers
      */
-    glutSwapBuffers();
+    glutSwapBuffers( );
 }
 
 /*
@@ -150,9 +152,9 @@ void SampleIdle( void )
 
     if( g_LeaveGameMode == 1 )
     {
-        glutLeaveGameMode();
+        glutLeaveGameMode( );
         g_LeaveGameMode = 0;
-	g_InGameMode = 0;
+        g_InGameMode = 0;
     }
 }    
 
@@ -181,7 +183,7 @@ void SampleReshape( int nWidth, int nHeight )
      * Move back the camera a bit
      */
     glMatrixMode( GL_MODELVIEW );
-    glLoadIdentity();
+    glLoadIdentity( );
     glTranslatef( 0.0, 0.0, -40.0f );
 
     /*
@@ -209,7 +211,8 @@ void SampleReshape( int nWidth, int nHeight )
  */
 void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
 {
-    printf( "SampleKeyboard(): keypress '%c' at (%i,%i)\n", cChar, nMouseX, nMouseY );
+    printf( "SampleKeyboard(): keypress '%c' at (%i,%i)\n",
+            cChar, nMouseX, nMouseY );
 }
 
 /*
@@ -218,7 +221,7 @@ void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
 void SampleGameModeKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
 {
     if( cChar == 27 )
-	g_LeaveGameMode = 1;
+        g_LeaveGameMode = 1;
 }
 
 
@@ -227,7 +230,8 @@ void SampleGameModeKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
  */
 void SampleSpecial( int nSpecial, int nMouseX, int nMouseY )
 {
-    printf( "SampleSpecial(): special keypress %i at (%i,%i)\n", nSpecial, nMouseX, nMouseY );
+    printf( "SampleSpecial(): special keypress %i at (%i,%i)\n",
+            nSpecial, nMouseX, nMouseY );
 }
 
 /*
@@ -248,11 +252,11 @@ int main( int argc, char** argv )
 {
     int menuID, subMenuA, subMenuB;
 
-    glutInit( &argc, argv );
-
     glutInitDisplayString( "stencil~2 rgb double depth>=16 samples" );
     glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
     glutInitWindowPosition( 100, 100 );
+
+    glutInit( &argc, argv );
 
     subMenuA = glutCreateMenu( SampleMenu );
     glutAddMenuEntry( "Sub menu A1 (01)", 1 );
@@ -307,9 +311,9 @@ int main( int argc, char** argv )
     glutAttachMenu( GLUT_LEFT_BUTTON );
 
     printf( "current window is %ix%i+%i+%i",
-	glutGet( GLUT_WINDOW_X ), glutGet( GLUT_WINDOW_Y ),
-	glutGet( GLUT_WINDOW_WIDTH ), glutGet( GLUT_WINDOW_HEIGHT )
-    );	
+            glutGet( GLUT_WINDOW_X ), glutGet( GLUT_WINDOW_Y ),
+            glutGet( GLUT_WINDOW_WIDTH ), glutGet( GLUT_WINDOW_HEIGHT )
+    );        
 
     /*
      * Enter the main FreeGLUT processing loop
@@ -321,7 +325,7 @@ int main( int argc, char** argv )
     /*
      * This is never reached in FreeGLUT. Is that good?
      */
-    return( EXIT_SUCCESS );
+    return EXIT_SUCCESS;
 }
 
 /*** END OF FILE ***/

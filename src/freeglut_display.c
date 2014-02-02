@@ -29,8 +29,6 @@
 #include "config.h"
 #endif
 
-#define  G_LOG_DOMAIN  "freeglut-display"
-
 #include "../include/GL/freeglut.h"
 #include "freeglut_internal.h"
 
@@ -44,7 +42,7 @@ void FGAPIENTRY glutPostRedisplay( void )
 {
     freeglut_assert_ready;
     freeglut_assert_window;
-    fgStructure.Window->State.Redisplay = TRUE;
+    fgStructure.Window->State.Redisplay = GL_TRUE;
 }
 
 /*
@@ -55,9 +53,9 @@ void FGAPIENTRY glutSwapBuffers( void )
     freeglut_assert_ready;
     freeglut_assert_window;
 
-    glFlush();
-    if ( ! fgStructure.Window->Window.DoubleBuffered )
-	return;
+    glFlush( );
+    if( ! fgStructure.Window->Window.DoubleBuffered )
+        return;
 
 #if TARGET_HOST_UNIX_X11
     glXSwapBuffers( fgDisplay.Display, fgStructure.Window->Window.Handle );
@@ -66,16 +64,19 @@ void FGAPIENTRY glutSwapBuffers( void )
 #endif
 
     /* GLUT_FPS env var support */
-    if (fgState.FPSInterval) {
-        GLint t = glutGet(GLUT_ELAPSED_TIME);
+    if( fgState.FPSInterval )
+    {
+        GLint t = glutGet( GLUT_ELAPSED_TIME );
         fgState.SwapCount++;
-        if (fgState.SwapTime == 0)
+        if( fgState.SwapTime == 0 )
             fgState.SwapTime = t;
-        else if (t - fgState.SwapTime > fgState.FPSInterval) {
-            float time = 0.001f * (t - fgState.SwapTime);
-            float fps = (float) fgState.SwapCount / time;
-            fprintf(stderr, "freeglut: %d frames in %.2f seconds = %.2f FPS\n",
-                    fgState.SwapCount, time, fps);
+        else if( t - fgState.SwapTime > fgState.FPSInterval )
+        {
+            float time = 0.001f * ( t - fgState.SwapTime );
+            float fps = ( float )fgState.SwapCount / time;
+            fprintf( stderr,
+                     "freeglut: %d frames in %.2f seconds = %.2f FPS\n",
+                     fgState.SwapCount, time, fps );
             fgState.SwapTime = t;
             fgState.SwapCount = 0;
         }
@@ -91,8 +92,8 @@ void FGAPIENTRY glutPostWindowRedisplay( int windowID )
 
     freeglut_assert_ready;
     window = fgWindowByID( windowID );
-    freeglut_return_if_fail( window != NULL );
-    window->State.Redisplay = TRUE;
+    freeglut_return_if_fail( window );
+    window->State.Redisplay = GL_TRUE;
 }
 
 /*** END OF FILE ***/

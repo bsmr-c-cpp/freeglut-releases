@@ -87,22 +87,22 @@ am__include = @am__include@
 am__quote = @am__quote@
 install_sh = @install_sh@
 
-EXTRA_DIST = Fractals.dsp fractals.c fractals.dat
-noinst_PROGRAMS = fractals
-fractals_SOURCES = fractals.c
-fractals_LDFLAGS = -export-dynamic ../../../src/lib@LIBRARY@.la
-fractals_CFLAGS = -I$(top_srcdir)/include $(X_CFLAGS)
-subdir = progs/demos/Fractals
+EXTRA_DIST = shapes.c shapes.dsp
+noinst_PROGRAMS = shapes
+shapes_SOURCES = shapes.c
+shapes_LDFLAGS = -export-dynamic ../../../src/lib@LIBRARY@.la
+shapes_CFLAGS = -I$(top_srcdir)/include $(X_CFLAGS)
+subdir = progs/demos/shapes
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
-noinst_PROGRAMS = fractals$(EXEEXT)
+noinst_PROGRAMS = shapes$(EXEEXT)
 PROGRAMS = $(noinst_PROGRAMS)
 
-am_fractals_OBJECTS = fractals-fractals.$(OBJEXT)
-fractals_OBJECTS = $(am_fractals_OBJECTS)
-fractals_LDADD = $(LDADD)
-fractals_DEPENDENCIES =
+am_shapes_OBJECTS = shapes-shapes.$(OBJEXT)
+shapes_OBJECTS = $(am_shapes_OBJECTS)
+shapes_LDADD = $(LDADD)
+shapes_DEPENDENCIES =
 
 DEFS = @DEFS@
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)
@@ -110,7 +110,7 @@ CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
-@AMDEP_TRUE@DEP_FILES = $(DEPDIR)/fractals-fractals.Po
+@AMDEP_TRUE@DEP_FILES = $(DEPDIR)/shapes-shapes.Po
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) \
@@ -119,9 +119,9 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 CFLAGS = @CFLAGS@
-DIST_SOURCES = $(fractals_SOURCES)
+DIST_SOURCES = $(shapes_SOURCES)
 DIST_COMMON = Makefile.am Makefile.in
-SOURCES = $(fractals_SOURCES)
+SOURCES = $(shapes_SOURCES)
 
 all: all-am
 
@@ -138,7 +138,7 @@ distclean-libtool:
 	-rm -f libtool
 $(srcdir)/Makefile.in:  Makefile.am  $(top_srcdir)/configure.in $(ACLOCAL_M4)
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  progs/demos/Fractals/Makefile
+	  $(AUTOMAKE) --gnu  progs/demos/shapes/Makefile
 Makefile:  $(srcdir)/Makefile.in  $(top_builddir)/config.status
 	cd $(top_builddir) && \
 	  CONFIG_HEADERS= CONFIG_LINKS= \
@@ -146,10 +146,10 @@ Makefile:  $(srcdir)/Makefile.in  $(top_builddir)/config.status
 
 clean-noinstPROGRAMS:
 	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
-fractals-fractals.$(OBJEXT): fractals.c
-fractals$(EXEEXT): $(fractals_OBJECTS) $(fractals_DEPENDENCIES) 
-	@rm -f fractals$(EXEEXT)
-	$(LINK) $(fractals_LDFLAGS) $(fractals_OBJECTS) $(fractals_LDADD) $(LIBS)
+shapes-shapes.$(OBJEXT): shapes.c
+shapes$(EXEEXT): $(shapes_OBJECTS) $(shapes_DEPENDENCIES) 
+	@rm -f shapes$(EXEEXT)
+	$(LINK) $(shapes_LDFLAGS) $(shapes_OBJECTS) $(shapes_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) core *.core
@@ -157,7 +157,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@$(DEPDIR)/fractals-fractals.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@$(DEPDIR)/shapes-shapes.Po@am__quote@
 
 distclean-depend:
 	-rm -rf $(DEPDIR)
@@ -180,23 +180,23 @@ distclean-depend:
 @AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 	$(LTCOMPILE) -c -o $@ `test -f $< || echo '$(srcdir)/'`$<
 
-fractals-fractals.o: fractals.c
-@AMDEP_TRUE@	source='fractals.c' object='fractals-fractals.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@	depfile='$(DEPDIR)/fractals-fractals.Po' tmpdepfile='$(DEPDIR)/fractals-fractals.TPo' @AMDEPBACKSLASH@
+shapes-shapes.o: shapes.c
+@AMDEP_TRUE@	source='shapes.c' object='shapes-shapes.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/shapes-shapes.Po' tmpdepfile='$(DEPDIR)/shapes-shapes.TPo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(fractals_CFLAGS) $(CFLAGS) -c -o fractals-fractals.o `test -f fractals.c || echo '$(srcdir)/'`fractals.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(shapes_CFLAGS) $(CFLAGS) -c -o shapes-shapes.o `test -f shapes.c || echo '$(srcdir)/'`shapes.c
 
-fractals-fractals.obj: fractals.c
-@AMDEP_TRUE@	source='fractals.c' object='fractals-fractals.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@	depfile='$(DEPDIR)/fractals-fractals.Po' tmpdepfile='$(DEPDIR)/fractals-fractals.TPo' @AMDEPBACKSLASH@
+shapes-shapes.obj: shapes.c
+@AMDEP_TRUE@	source='shapes.c' object='shapes-shapes.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/shapes-shapes.Po' tmpdepfile='$(DEPDIR)/shapes-shapes.TPo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(fractals_CFLAGS) $(CFLAGS) -c -o fractals-fractals.obj `cygpath -w fractals.c`
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(shapes_CFLAGS) $(CFLAGS) -c -o shapes-shapes.obj `cygpath -w shapes.c`
 
-fractals-fractals.lo: fractals.c
-@AMDEP_TRUE@	source='fractals.c' object='fractals-fractals.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@	depfile='$(DEPDIR)/fractals-fractals.Plo' tmpdepfile='$(DEPDIR)/fractals-fractals.TPlo' @AMDEPBACKSLASH@
+shapes-shapes.lo: shapes.c
+@AMDEP_TRUE@	source='shapes.c' object='shapes-shapes.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/shapes-shapes.Plo' tmpdepfile='$(DEPDIR)/shapes-shapes.TPlo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-	$(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(fractals_CFLAGS) $(CFLAGS) -c -o fractals-fractals.lo `test -f fractals.c || echo '$(srcdir)/'`fractals.c
+	$(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(shapes_CFLAGS) $(CFLAGS) -c -o shapes-shapes.lo `test -f shapes.c || echo '$(srcdir)/'`shapes.c
 CCDEPMODE = @CCDEPMODE@
 uninstall-info-am:
 

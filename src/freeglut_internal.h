@@ -30,7 +30,7 @@
 
 /* XXX Update these for each release! */
 #define  VERSION_MAJOR 2
-#define  VERSION_MINOR 0
+#define  VERSION_MINOR 2
 #define  VERSION_PATCH 0 
 
 /*
@@ -77,6 +77,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #if TARGET_HOST_UNIX_X11
+#include <unistd.h>
 #include <sys/time.h>
 #endif
 
@@ -114,42 +115,43 @@
 /*
  * Freeglut callbacks type definitions
  */
-typedef void (* FGCBdisplay       )( void );
-typedef void (* FGCBreshape       )( int, int );
-typedef void (* FGCBvisibility    )( int );
-typedef void (* FGCBkeyboard      )( unsigned char, int, int );
-typedef void (* FGCBspecial       )( int, int, int );
-typedef void (* FGCBmouse         )( int, int, int, int );
-typedef void (* FGCBmotion        )( int, int );
-typedef void (* FGCBpassive       )( int, int );
-typedef void (* FGCBentry         )( int );
-typedef void (* FGCBwindowStatus  )( int );
-typedef void (* FGCBselect        )( int, int, int );
-typedef void (* FGCBjoystick      )( unsigned int, int, int, int );
-typedef void (* FGCBkeyboardUp    )( unsigned char, int, int );
-typedef void (* FGCBspecialUp     )( int, int, int );
-typedef void (* FGCBoverlayDisplay)( void );
-typedef void (* FGCBspaceMotion   )( int, int, int );
-typedef void (* FGCBspaceRotate   )( int, int, int );
-typedef void (* FGCBspaceButton   )( int, int );
-typedef void (* FGCBdials         )( int, int );
-typedef void (* FGCBbuttonBox     )( int, int );
-typedef void (* FGCBtabletMotion  )( int, int );
-typedef void (* FGCBtabletButton  )( int, int, int, int );
-typedef void (* FGCBdestroy       )( void );
+typedef void (* FGCBDisplay       )( void );
+typedef void (* FGCBReshape       )( int, int );
+typedef void (* FGCBVisibility    )( int );
+typedef void (* FGCBKeyboard      )( unsigned char, int, int );
+typedef void (* FGCBSpecial       )( int, int, int );
+typedef void (* FGCBMouse         )( int, int, int, int );
+typedef void (* FGCBMouseWheel    )( int, int, int, int );
+typedef void (* FGCBMotion        )( int, int );
+typedef void (* FGCBPassive       )( int, int );
+typedef void (* FGCBEntry         )( int );
+typedef void (* FGCBWindowStatus  )( int );
+typedef void (* FGCBSelect        )( int, int, int );
+typedef void (* FGCBJoystick      )( unsigned int, int, int, int );
+typedef void (* FGCBKeyboardUp    )( unsigned char, int, int );
+typedef void (* FGCBSpecialUp     )( int, int, int );
+typedef void (* FGCBOverlayDisplay)( void );
+typedef void (* FGCBSpaceMotion   )( int, int, int );
+typedef void (* FGCBSpaceRotation )( int, int, int );
+typedef void (* FGCBSpaceButton   )( int, int );
+typedef void (* FGCBDials         )( int, int );
+typedef void (* FGCBButtonBox     )( int, int );
+typedef void (* FGCBTabletMotion  )( int, int );
+typedef void (* FGCBTabletButton  )( int, int, int, int );
+typedef void (* FGCBDestroy       )( void );
 
 /*
  * The global callbacks type definitions
  */
-typedef void (* FGCBidle          )( void );
-typedef void (* FGCBtimer         )( int );
-typedef void (* FGCBmenuState     )( int );
-typedef void (* FGCBmenuStatus    )( int, int, int );
+typedef void (* FGCBIdle          )( void );
+typedef void (* FGCBTimer         )( int );
+typedef void (* FGCBMenuState     )( int );
+typedef void (* FGCBMenuStatus    )( int, int, int );
 
 /*
  * The callback used when creating/using menus
  */
-typedef void (* FGCBmenu          )( int );
+typedef void (* FGCBMenu          )( int );
 
 
 /*
@@ -197,9 +199,11 @@ struct tagSFG_Time
 };
 
 /*
- * An enumeration containing the state of the GLUT execution:  initializing, running, or stopping
+ * An enumeration containing the state of the GLUT execution:
+ * initializing, running, or stopping
  */
-typedef enum {
+typedef enum
+{
   GLUT_EXEC_STATE_INIT,
   GLUT_EXEC_STATE_RUNNING,
   GLUT_EXEC_STATE_STOP
@@ -211,42 +215,46 @@ typedef enum {
 typedef struct tagSFG_State SFG_State;
 struct tagSFG_State
 {
-    SFG_XYUse        Position;             /* The default windows' position     */
-    SFG_XYUse        Size;                 /* The default windows' size         */
-    unsigned int     DisplayMode;          /* The display mode for new windows  */
+    SFG_XYUse        Position;             /* The default windows' position  */
+    SFG_XYUse        Size;                 /* The default windows' size      */
+    unsigned int     DisplayMode;          /* Display mode for new windows   */
 
-    GLboolean        ForceDirectContext;   /* Should we force direct contexts?  */
-    GLboolean        TryDirectContext;     /* What about giving a try to?       */
+    GLboolean        Initialised;          /* freeglut has been initialised  */
 
-    GLboolean        ForceIconic;          /* All new top windows are iconified */
-    GLboolean        UseCurrentContext;    /* New windows use current window's rendering context */
+    GLboolean        ForceDirectContext;   /* Force direct rendering?        */
+    GLboolean        TryDirectContext;     /* What about giving a try to?    */
 
-    GLboolean        GLDebugSwitch;        /* OpenGL state debugging switch     */
-    GLboolean        XSyncSwitch;          /* X11 sync protocol switch          */
+    GLboolean        ForceIconic;          /* New top windows are iconified  */
+    GLboolean        UseCurrentContext;    /* New windows share with current */
 
-    GLboolean        IgnoreKeyRepeat;      /* Whether to ignore key repeat...   */
+    GLboolean        GLDebugSwitch;        /* OpenGL state debugging switch  */
+    GLboolean        XSyncSwitch;          /* X11 sync protocol switch       */
 
-    GLuint           FPSInterval;          /* Interval between FPS printfs      */
-    GLuint           SwapCount;            /* Count of glutSwapBuffer calls     */
-    GLuint           SwapTime;             /* Time of last SwapBuffers          */
+    GLboolean        IgnoreKeyRepeat;      /* Whether to ignore key repeat.  */
+    int              Modifiers;            /* Current ALT/SHIFT/CTRL state   */
 
-    SFG_Time         Time;                 /* The time that glutInit was called */
-    SFG_List         Timers;               /* The freeglut timer hooks          */
+    GLuint           FPSInterval;          /* Interval between FPS printfs   */
+    GLuint           SwapCount;            /* Count of glutSwapBuffer calls  */
+    GLuint           SwapTime;             /* Time of last SwapBuffers       */
 
-    FGCBidle         IdleCallback;         /* The global idle callback          */
+    SFG_Time         Time;                 /* Time that glutInit was called  */
+    SFG_List         Timers;               /* The freeglut timer hooks       */
+    SFG_List         FreeTimers;           /* The unused timer hooks         */
 
-    GLboolean        BuildingAMenu;        /* True if we are presently making a menu */
-    int              ActiveMenus;          /* Number of currently active menus  */
-    FGCBmenuState    MenuStateCallback;    /* Menu callbacks are global         */
-    FGCBmenuStatus   MenuStatusCallback;
+    FGCBIdle         IdleCallback;         /* The global idle callback       */
 
-    SFG_XYUse        GameModeSize;         /* The game mode screen's dimensions */
-    int              GameModeDepth;        /* The pixel depth for game mode     */
-    int              GameModeRefresh;      /* The refresh rate for game mode    */
+    int              ActiveMenus;          /* Num. of currently active menus */
+    FGCBMenuState    MenuStateCallback;    /* Menu callbacks are global      */
+    FGCBMenuStatus   MenuStatusCallback;
 
-    int              ActionOnWindowClose ; /* Action when user clicks "x" on window header bar */
+    SFG_XYUse        GameModeSize;         /* Game mode screen's dimensions  */
+    int              GameModeDepth;        /* The pixel depth for game mode  */
+    int              GameModeRefresh;      /* The refresh rate for game mode */
 
-    fgExecutionState ExecState ;           /* Current state of the GLUT execution */
+    int              ActionOnWindowClose; /* Action when user closes window  */
+
+    fgExecutionState ExecState;           /* Used for GLUT termination       */
+    char            *ProgramName;         /* Name of the invoking program    */
 };
 
 /*
@@ -298,9 +306,25 @@ struct tagSFG_Timer
 {
     SFG_Node        Node;
     int             ID;                 /* The timer ID integer              */
-    FGCBtimer       Callback;           /* The timer callback                */
+    FGCBTimer       Callback;           /* The timer callback                */
     long            TriggerTime;        /* The timer trigger time            */
 };
+
+/*
+ * Make "freeglut" window handle and context types so that we don't need so
+ * much conditionally-compiled code later in the library.
+ */
+#if TARGET_HOST_UNIX_X11
+
+typedef Window     SFG_WindowHandleType ;
+typedef GLXContext SFG_WindowContextType ;
+
+#elif TARGET_HOST_WIN32
+
+typedef HWND    SFG_WindowHandleType ;
+typedef HGLRC   SFG_WindowContextType ;
+
+#endif
 
 /*
  * A window and its OpenGL context. The contents of this structure
@@ -309,19 +333,16 @@ struct tagSFG_Timer
 typedef struct tagSFG_Context SFG_Context;
 struct tagSFG_Context
 {
+    SFG_WindowHandleType  Handle;    /* The window's handle                 */
+    SFG_WindowContextType Context;   /* The window's OpenGL/WGL context     */
+
 #if TARGET_HOST_UNIX_X11
-    Window          Handle;             /* The window's handle                 */
-    GLXContext      Context;            /* The OpenGL context                  */
-    XVisualInfo*    VisualInfo;         /* The window's visual information     */
-
+    XVisualInfo*    VisualInfo;      /* The window's visual information     */
 #elif TARGET_HOST_WIN32
-    HWND            Handle;             /* The window's handle                 */
-    HDC             Device;             /* The window's device context         */
-    HGLRC           Context;            /* The window's WGL context            */
-
+    HDC             Device;          /* The window's device context         */
 #endif
 
-    int             DoubleBuffered;     /* Treat the window as double-buffered */
+    int             DoubleBuffered;  /* Treat the window as double-buffered */
 };
 
 /*
@@ -332,12 +353,13 @@ struct tagSFG_WindowState
 {
     int             Width;              /* Window's width in pixels          */
     int             Height;             /* The same about the height         */
+    int             OldWidth;           /* Window width from before a resize */
+    int             OldHeight;          /*   "    height  "    "    "   "    */
 
     GLboolean       Redisplay;          /* Do we have to redisplay?          */
     GLboolean       Visible;            /* Is the window visible now         */
 
     int             Cursor;             /* The currently selected cursor     */
-    int             Modifiers;          /* The current ALT/SHIFT/CTRL state  */
 
     long            JoystickPollRate;   /* The joystick polling rate         */
     long            JoystickLastPoll;   /* When the last poll has happened   */
@@ -346,49 +368,102 @@ struct tagSFG_WindowState
 
     GLboolean       IsGameMode;         /* Is this the game mode window?     */
 
-#if TARGET_HOST_WIN32
-    GLboolean       NeedToResize;       /* Do we need to explicitly resize?  */
-#endif
+    GLboolean       NeedToResize;       /* Do we need to resize the window?  */
 };
+
+
+/*
+ * FETCH_WCB() is used as:
+ *
+ *     FETCH_WCB( window, Visibility );
+ *
+ * ...where {window} is the freeglut window to fetch the callback from,
+ *          {Visibility} is the window-specific callback to fetch.
+ *
+ * The result is correctly type-cast to the callback function pointer
+ * type.
+ */
+#define FETCH_WCB(window,cbname) \
+    ((FGCB ## cbname)((window).CallBacks[CB_ ## cbname]))
+
+/*
+ * INVOKE_WCB() is used as:
+ *
+ *     INVOKE_WCB( window, Visibility, ( status ) );
+ *
+ * ...where {window} is the freeglut window,
+ *          {Visibility} is the window-specific callback,
+ *          {(status)} is the parameter list.
+ *
+ * The callback is invoked as:
+ *
+ *    callback( status );
+ *
+ * ...so the parentheses are REQUIRED in the {arg_list}.
+ *
+ * NOTE that it does a sanity-check and also sets the
+ * current window.
+ *
+ */
+#define INVOKE_WCB(window,cbname,arg_list)    \
+do                                            \
+{                                             \
+    if( FETCH_WCB( window, cbname ) )         \
+    {                                         \
+        fgSetWindow( &window );               \
+        FETCH_WCB( window, cbname ) arg_list; \
+    }                                         \
+} while( 0 )
 
 /*
  * The window callbacks the user can supply us with. Should be kept portable.
+ *
+ * This enumeration provides the freeglut CallBack numbers.
+ * The symbolic constants are indices into a window's array of
+ * function callbacks.  The names are formed by splicing a common
+ * prefix onto the callback's base name.  (This was originally
+ * done so that an early stage of development could live side-by-
+ * side with the old callback code.  The old callback code used
+ * the bare callback's name as a structure member, so I used a
+ * prefix for the array index name.)
+ *
+ * XXX For consistancy, perhaps the prefix should match the
+ * XXX FETCH* and INVOKE* macro suffices.  I.e., WCB_, rather than
+ * XXX CB_.
  */
-typedef struct tagSFG_WindowCallbacks SFG_WindowCallbacks;
-struct tagSFG_WindowCallbacks
+enum
 {
-    /*
-     * Following callbacks are fully supported right now
-     * and are ready to be tested for GLUT conformance:
-     */
-    FGCBdisplay         Display;
-    FGCBreshape         Reshape;
-    FGCBkeyboard        Keyboard;
-    FGCBkeyboardUp      KeyboardUp;
-    FGCBspecial         Special;
-    FGCBspecialUp       SpecialUp;
-    FGCBmouse           Mouse;
-    FGCBmotion          Motion;
-    FGCBpassive         Passive;
-    FGCBentry           Entry;
-    FGCBvisibility      Visibility;
-    FGCBwindowStatus    WindowStatus;
-    FGCBjoystick        Joystick;
-    FGCBdestroy         Destroy;
+    CB_Display,
+    CB_Reshape,
+    CB_Keyboard,
+    CB_KeyboardUp,
+    CB_Special,
+    CB_SpecialUp,
+    CB_Mouse,
+    CB_MouseWheel,
+    CB_Motion,
+    CB_Passive,
+    CB_Entry,
+    CB_Visibility,
+    CB_WindowStatus,
+    CB_Joystick,
+    CB_Destroy,
 
-    /*
-     * Those callbacks are being ignored for the moment
-     */
-    FGCBselect          Select;
-    FGCBoverlayDisplay  OverlayDisplay;
-    FGCBspaceMotion     SpaceMotion;
-    FGCBspaceRotate     SpaceRotation;
-    FGCBspaceButton     SpaceButton;
-    FGCBdials           Dials;
-    FGCBbuttonBox       ButtonBox;
-    FGCBtabletMotion    TabletMotion;
-    FGCBtabletButton    TabletButton;
+    /* Presently ignored */
+    CB_Select,
+    CB_OverlayDisplay,
+    CB_SpaceMotion,
+    CB_SpaceRotation,
+    CB_SpaceButton,
+    CB_Dials,
+    CB_ButtonBox,
+    CB_TabletMotion,
+    CB_TabletButton,
+    
+    /* Always make this the LAST one */
+    TOTAL_CALLBACKS
 };
+
 
 /*
  * This structure holds the OpenGL rendering context for all the menu windows
@@ -397,12 +472,10 @@ typedef struct tagSFG_MenuContext SFG_MenuContext;
 struct tagSFG_MenuContext
 {
 #if TARGET_HOST_UNIX_X11
-    GLXContext          Context;                /* The menu OpenGL context   */
-    XVisualInfo*        VisualInfo;             /* The window's visual information */
-#elif TARGET_HOST_WIN32
-    HGLRC               Context;                /* The menu window's WGL context    */
+    XVisualInfo*        VisualInfo;       /* The window's visual information */
 #endif
 
+    SFG_WindowContextType Context;        /* The menu window's WGL context   */
 };
 
 /*
@@ -414,19 +487,19 @@ typedef struct tagSFG_Menu SFG_Menu;
 struct tagSFG_Menu
 {
     SFG_Node            Node;
-    void               *UserData ;              /* A. Donev:  User data passed back at callback */
-    int                 ID;                     /* The global menu ID        */
-    SFG_List            Entries;                /* The menu entries list     */
-    FGCBmenu            Callback;               /* The menu callback         */
-    FGCBdestroy         Destroy;                /* A. Donev:  Destruction callback         */
-    GLboolean           IsActive;               /* Is the menu selected?     */
-    int                 Width;                  /* Menu box width in pixels  */
-    int                 Height;                 /* Menu box height in pixels */
-    int                 X, Y;                   /* Menu box raster position  */
+    void               *UserData;     /* User data passed back at callback   */
+    int                 ID;           /* The global menu ID                  */
+    SFG_List            Entries;      /* The menu entries list               */
+    FGCBMenu            Callback;     /* The menu callback                   */
+    FGCBDestroy         Destroy;      /* Destruction callback                */
+    GLboolean           IsActive;     /* Is the menu selected?               */
+    int                 Width;        /* Menu box width in pixels            */
+    int                 Height;       /* Menu box height in pixels           */
+    int                 X, Y;         /* Menu box raster position            */
 
-    SFG_MenuEntry      *ActiveEntry ;           /* Currently active entry in the menu */
-    SFG_Window         *Window ;                /* OpenGL window for menu    */
-    SFG_Window         *ParentWindow ;          /* OpenGL window in which the menu is defined */
+    SFG_MenuEntry      *ActiveEntry;  /* Currently active entry in the menu  */
+    SFG_Window         *Window;       /* Window for menu                     */
+    SFG_Window         *ParentWindow; /* Window in which the menu is defined */
 };
 
 /*
@@ -444,7 +517,8 @@ struct tagSFG_MenuEntry
 };
 
 /*
- * A window, making part of freeglut windows hierarchy. Should be kept portable.
+ * A window, making part of freeglut windows hierarchy.
+ * Should be kept portable.
  */
 struct tagSFG_Window
 {
@@ -453,8 +527,8 @@ struct tagSFG_Window
 
     SFG_Context         Window;                 /* Window and OpenGL context */
     SFG_WindowState     State;                  /* The window state          */
-    SFG_WindowCallbacks Callbacks;              /* The window callbacks      */
-    void               *UserData ;              /* A. Donev:  A pointer to user data used in rendering */
+    void         *CallBacks[ TOTAL_CALLBACKS ]; /* Array of window callbacks */
+    void               *UserData ;              /* For use by user           */
 
     SFG_Menu*       Menu[ FREEGLUT_MAX_MENUS ]; /* Menus appended to window  */
     SFG_Menu*       ActiveMenu;                 /* The window's active menu  */
@@ -465,16 +539,16 @@ struct tagSFG_Window
     GLboolean           IsMenu;                 /* Set to 1 if we are a menu */
 };
 
+
 /*
  * A linked list structure of windows
  */
 typedef struct tagSFG_WindowList SFG_WindowList ;
 struct tagSFG_WindowList
 {
-  SFG_Window *window ;
-  GLboolean needToClose ;
-  SFG_WindowList *next ;
-} ;
+    SFG_Window *window ;
+    SFG_WindowList *next ;
+};
 
 /*
  * This holds information about all the windows, menus etc.
@@ -482,18 +556,18 @@ struct tagSFG_WindowList
 typedef struct tagSFG_Structure SFG_Structure;
 struct tagSFG_Structure
 {
-    SFG_List            Windows;                /* The global windows list   */
-    SFG_List            Menus;                  /* The global menus list     */
+    SFG_List        Windows;      /* The global windows list            */
+    SFG_List        Menus;        /* The global menus list              */
 
-    SFG_Window*         Window;                 /* The currently active win. */
-    SFG_Menu*           Menu;                   /* Same, but menu...         */
+    SFG_Window*     Window;       /* The currently active win.          */
+    SFG_Menu*       Menu;         /* Same, but menu...                  */
 
-    SFG_MenuContext*    MenuContext;            /* OpenGL rendering context for menus */
+    SFG_MenuContext* MenuContext; /* OpenGL rendering context for menus */
 
-    SFG_Window*         GameMode;               /* The game mode window      */
+    SFG_Window*      GameMode;    /* The game mode window               */
 
-    int                 WindowID;               /* The new current window ID */
-    int                 MenuID;                 /* The new current menu ID   */
+    int              WindowID;    /* The new current window ID          */
+    int              MenuID;      /* The new current menu ID            */
 };
 
 /*
@@ -516,12 +590,12 @@ typedef void (* FGCBenumerator  )( SFG_Window *, SFG_Enumerator * );
 typedef struct tagSFG_Font SFG_Font;
 struct tagSFG_Font
 {
-    char*           Name;                       /* The source font name      */
-    int             Quantity;                   /* Number of chars in font   */
-    int             Height;                     /* Height of the characters  */
-    const GLubyte** Characters;                 /* The characters mapping    */
+    char*           Name;         /* The source font name             */
+    int             Quantity;     /* Number of chars in font          */
+    int             Height;       /* Height of the characters         */
+    const GLubyte** Characters;   /* The characters mapping           */
 
-    float           xorig, yorig ;              /* The origin of the character relative to the draw location */
+    float           xorig, yorig; /* Relative origin of the character */
 };
 
 /*
@@ -582,21 +656,25 @@ extern SFG_State fgState;
  * A call to this function makes us sure that the Display and Structure
  * subsystems have been properly initialized and are ready to be used
  */
-#define  freeglut_assert_ready                      assert( fgState.Time.Set );
+#define  freeglut_assert_ready  assert( fgState.Initialised );
 
 /*
  * Following definitions are somewhat similiar to GLib's,
  * but do not generate any log messages:
  */
-#define  freeglut_return_if_fail( expr )            if( !(expr) ) return;
-#define  freeglut_return_val_if_fail( expr, val )   if( !(expr) ) return( val );
+#define  freeglut_return_if_fail( expr ) \
+    if( !(expr) )                        \
+        return;
+#define  freeglut_return_val_if_fail( expr, val ) \
+    if( !(expr) )                                 \
+        return val ;
 
 /*
  * A call to those macros assures us that there is a current
  * window and menu set, respectively:
  */
-#define  freeglut_assert_window                     assert( fgStructure.Window != NULL );
-#define  freeglut_assert_menu                       assert( fgStructure.Menu != NULL );
+#define  freeglut_assert_window assert( fgStructure.Window != NULL );
+#define  freeglut_assert_menu   assert( fgStructure.Menu != NULL );
 
 /*
  * The initialize and deinitialize functions get called on glutInit()
@@ -626,26 +704,34 @@ XVisualInfo* fgChooseVisual( void );
  * The window procedure for Win32 events handling
  */
 #if TARGET_HOST_WIN32
-LRESULT CALLBACK fgWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
-GLboolean fgSetupPixelFormat( SFG_Window* window, GLboolean checkOnly, unsigned char layer_type );
+LRESULT CALLBACK fgWindowProc( HWND hWnd, UINT uMsg,
+                               WPARAM wParam, LPARAM lParam );
+GLboolean fgSetupPixelFormat( SFG_Window* window, GLboolean checkOnly,
+                              unsigned char layer_type );
 #endif
 
 /*
  * Window creation, opening, closing and destruction.
+ * Also CallBack clearing/initialization.
  * Defined in freeglut_structure.c, freeglut_window.c.
  */
-SFG_Window* fgCreateWindow( SFG_Window* parent, const char* title, int x, int y, int w, int h, GLboolean gameMode );
-void        fgSetWindow ( SFG_Window *window ) ;
-void        fgOpenWindow( SFG_Window* window, const char* title, int x, int y, int w, int h, GLboolean gameMode, int isSubWindow );
+SFG_Window* fgCreateWindow( SFG_Window* parent, const char* title,
+                            int x, int y, int w, int h,
+                            GLboolean gameMode, GLboolean isMenu );
+void        fgSetWindow ( SFG_Window *window );
+void        fgOpenWindow( SFG_Window* window, const char* title,
+                          int x, int y, int w, int h, GLboolean gameMode,
+                          GLboolean isSubWindow );
 void        fgCloseWindow( SFG_Window* window );
-void        fgAddToWindowDestroyList ( SFG_Window* window, GLboolean needToClose ) ;
-void        fgCloseWindows () ;
-void        fgDestroyWindow( SFG_Window* window, GLboolean needToClose );
+void        fgAddToWindowDestroyList ( SFG_Window* window );
+void        fgCloseWindows ();
+void        fgDestroyWindow( SFG_Window* window );
+void        fgClearCallBacks( SFG_Window *window );
 
 /*
  * Menu creation and destruction. Defined in freeglut_structure.c
  */
-SFG_Menu*   fgCreateMenu( FGCBmenu menuCallback );
+SFG_Menu*   fgCreateMenu( FGCBMenu menuCallback );
 void        fgDestroyMenu( SFG_Menu* menu );
 
 /*
@@ -668,19 +754,15 @@ void        fgJoystickPollWindow( SFG_Window* window );
  * are defined and exported from freeglut_structure.c file.
  */
 void fgEnumWindows( FGCBenumerator enumCallback, SFG_Enumerator* enumerator );
-void fgEnumSubWindows( SFG_Window* window, FGCBenumerator enumCallback, SFG_Enumerator* enumerator );
+void fgEnumSubWindows( SFG_Window* window, FGCBenumerator enumCallback,
+                       SFG_Enumerator* enumerator );
 
 /*
  * fgWindowByHandle returns a (SFG_Window *) value pointing to the
  * first window in the queue matching the specified window handle.
  * The function is defined in freeglut_structure.c file.
  */
-#if TARGET_HOST_UNIX_X11
-    SFG_Window* fgWindowByHandle( Window hWindow );
-#elif TARGET_HOST_WIN32
-
-    SFG_Window* fgWindowByHandle( HWND hWindow );
-#endif
+SFG_Window* fgWindowByHandle( SFG_WindowHandleType hWindow );
 
 /*
  * This function is similiar to the previous one, except it is
@@ -690,7 +772,7 @@ void fgEnumSubWindows( SFG_Window* window, FGCBenumerator enumCallback, SFG_Enum
 SFG_Window* fgWindowByID( int windowID );
 
 /*
- * Looks up a menu given its ID. This is easier that fgWindowByXXX
+ * Looks up a menu given its ID. This is easier than fgWindowByXXX
  * as all menus are placed in a single doubly linked list...
  */
 SFG_Menu* fgMenuByID( int menuID );
@@ -700,8 +782,8 @@ SFG_Menu* fgMenuByID( int menuID );
  * of the menu user interface handling code...
  */
 void fgActivateMenu( SFG_Window* window, int button );
-void fgExecuteMenuCallback( SFG_Menu* menu ) ;
-GLboolean fgCheckActiveMenu ( SFG_Window *window, SFG_Menu *menu ) ;
+void fgExecuteMenuCallback( SFG_Menu* menu );
+GLboolean fgCheckActiveMenu ( SFG_Window *window, SFG_Menu *menu );
 void fgDeactivateMenu( SFG_Window *window );
 void fgDeactivateSubMenu( SFG_MenuEntry *menuEntry );
 
@@ -730,6 +812,7 @@ void fgListInit(SFG_List *list);
 void fgListAppend(SFG_List *list, SFG_Node *node);
 void fgListRemove(SFG_List *list, SFG_Node *node);
 int fgListLength(SFG_List *list);
+void fgListInsert(SFG_List *list, SFG_Node *next, SFG_Node *node);
 
 /*
  * Error Messages functions

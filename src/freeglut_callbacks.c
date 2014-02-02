@@ -29,8 +29,6 @@
 #include "config.h"
 #endif
 
-#define  G_LOG_DOMAIN  "freeglut-callbacks"
-
 #include "../include/GL/freeglut.h"
 #include "freeglut_internal.h"
 
@@ -40,8 +38,10 @@
 /*
  * All of the callbacks setting methods can be generalized to this:
  */
-#define SET_CALLBACK(a) if( fgStructure.Window == NULL ) return;\
-                            fgStructure.Window->Callbacks.a = callback;
+#define SET_CALLBACK(a)              \
+    if( fgStructure.Window == NULL ) \
+        return;                      \
+    FETCH_WCB( ( *( fgStructure.Window ) ), a ) = callback;
 
 /*
  * Sets the Display callback for the current window
@@ -49,10 +49,10 @@
 void FGAPIENTRY glutDisplayFunc( void (* callback)( void ) )
 {
     if( !callback )
-	fgError ("Fatal error in program.  NULL display callback not "
-	    "permitted in GLUT 3.0+ or freeglut 2.0.1+\n");
+        fgError( "Fatal error in program.  NULL display callback not "
+                 "permitted in GLUT 3.0+ or freeglut 2.0.1+\n" );
     SET_CALLBACK( Display );
-    fgStructure.Window->State.Redisplay = TRUE;
+    fgStructure.Window->State.Redisplay = GL_TRUE;
 }
 
 /*
@@ -66,7 +66,8 @@ void FGAPIENTRY glutReshapeFunc( void (* callback)( int, int ) )
 /*
  * Sets the Keyboard callback for the current window
  */
-void FGAPIENTRY glutKeyboardFunc( void (* callback)( unsigned char, int, int ) )
+void FGAPIENTRY glutKeyboardFunc( void (* callback)
+                                  ( unsigned char, int, int ) )
 {
     SET_CALLBACK( Keyboard );
 }
@@ -91,21 +92,35 @@ void FGAPIENTRY glutIdleFunc( void (* callback)( void ) )
 /*
  * Sets the Timer callback for the current window
  */
-void FGAPIENTRY glutTimerFunc( unsigned int timeOut, void (* callback)( int ), int timerID )
+void FGAPIENTRY glutTimerFunc( unsigned int timeOut, void (* callback)( int ),
+                               int timerID )
 {
-    SFG_Timer* timer;
+    SFG_Timer *timer, *node;
 
     freeglut_assert_ready;
 
-    timer = (SFG_Timer *)calloc( sizeof(SFG_Timer), 1 );
-    if (!timer)
-	fgError ("Fatal error: "
-	    "Memory allocation failure in glutTimerFunc()\n");
+    if( (timer = fgState.FreeTimers.Last) )
+    {
+        fgListRemove( &fgState.FreeTimers, &timer->Node );
+    }
+    else
+    {
+        if( ! (timer = malloc(sizeof(SFG_Timer))) )
+            fgError( "Fatal error: "
+                     "Memory allocation failure in glutTimerFunc()\n" );
+    }
 
     timer->Callback  = callback;
     timer->ID        = timerID;
     timer->TriggerTime = fgElapsedTime() + timeOut;
-    fgListAppend( &fgState.Timers, &timer->Node );
+
+    for( node = fgState.Timers.First; node; node = node->Node.Next )
+    {
+        if( node->TriggerTime > timer->TriggerTime )
+            break;
+    }
+
+    fgListInsert( &fgState.Timers, &node->Node, &timer->Node );
 }
 
 /*
@@ -113,14 +128,14 @@ void FGAPIENTRY glutTimerFunc( unsigned int timeOut, void (* callback)( int ), i
  */
 static void fghVisibility( int status )
 {
+    int glut_status = GLUT_VISIBLE;
+    
     freeglut_assert_ready;
-    freeglut_return_if_fail( fgStructure.Window != NULL );
-    freeglut_return_if_fail( fgStructure.Window->Callbacks.Visibility != NULL );
+    freeglut_return_if_fail( fgStructure.Window );
 
-    if( status == GLUT_HIDDEN  || status == GLUT_FULLY_COVERED )
-        fgStructure.Window->Callbacks.Visibility( GLUT_NOT_VISIBLE );
-    else
-        fgStructure.Window->Callbacks.Visibility( GLUT_VISIBLE );
+    if( ( GLUT_HIDDEN == status )  || ( GLUT_FULLY_COVERED == status ) )
+        glut_status = GLUT_NOT_VISIBLE;
+    INVOKE_WCB( *( fgStructure.Window ), Visibility, ( glut_status ) );
 }
 
 void FGAPIENTRY glutVisibilityFunc( void (* callback)( int ) )
@@ -136,7 +151,8 @@ void FGAPIENTRY glutVisibilityFunc( void (* callback)( int ) )
 /*
  * Sets the keyboard key release callback for the current window
  */
-void FGAPIENTRY glutKeyboardUpFunc( void (* callback)( unsigned char, int, int ) )
+void FGAPIENTRY glutKeyboardUpFunc( void (* callback)
+                                    ( unsigned char, int, int ) )
 {
     SET_CALLBACK( KeyboardUp );
 }
@@ -152,7 +168,9 @@ void FGAPIENTRY glutSpecialUpFunc( void (* callback)( int, int, int ) )
 /*
  * Sets the joystick callback and polling rate for the current window
  */
-void FGAPIENTRY glutJoystickFunc( void (* callback)( unsigned int, int, int, int ), int pollInterval )
+void FGAPIENTRY glutJoystickFunc( void (* callback)
+                                  ( unsigned int, int, int, int ),
+                                  int pollInterval )
 {
     SET_CALLBACK( Joystick );
     fgStructure.Window->State.JoystickPollRate = pollInterval;
@@ -170,6 +188,14 @@ void FGAPIENTRY glutJoystickFunc( void (* callback)( unsigned int, int, int, int
 void FGAPIENTRY glutMouseFunc( void (* callback)( int, int, int, int ) )
 {
     SET_CALLBACK( Mouse );
+}
+
+/*
+ * Sets the mouse wheel callback for the current window
+ */
+void FGAPIENTRY glutMouseWheelFunc( void (* callback)( int, int, int, int ) )
+{
+    SET_CALLBACK( MouseWheel );
 }
 
 /*
@@ -214,9 +240,8 @@ void FGAPIENTRY glutWMCloseFunc( void (* callback)( void ) )
 /* A. Donev: Destruction callback for menus */
 void FGAPIENTRY glutMenuDestroyFunc( void (* callback)( void ) )
 {
-   if( fgStructure.Menu == NULL )
-       return;
-   fgStructure.Menu->Destroy = callback;
+    if( fgStructure.Menu )
+        fgStructure.Menu->Destroy = callback;
 }
 
 /*

@@ -29,8 +29,6 @@
 #include "config.h"
 #endif
 
-#define  G_LOG_DOMAIN  "freeglut-misc"
-
 #include "../include/GL/freeglut.h"
 #include "freeglut_internal.h"
 
@@ -47,27 +45,22 @@
 
 /*
  * This functions checks if an OpenGL extension is supported or not
+ *
+ * XXX Wouldn't this be simpler and clearer if we used strtok()?
  */
 int FGAPIENTRY glutExtensionSupported( const char* extension )
 {
   const char *extensions, *start;
-  const int len = strlen( extension ) ;
+  const int len = strlen( extension );
 
   /*
-   * Make sure there is a current window, and thus -- a current context available
+   * Make sure there is a current window, and thus a current context available
    */
   freeglut_assert_ready;
   freeglut_return_val_if_fail( fgStructure.Window != NULL, 0 );
 
-  /*
-   * Check if the extension itself looks valid (contains no spaces)
-   */
   if (strchr(extension, ' '))
     return 0;
-
-  /*
-   * Note it is safe to query the extensions
-   */
   start = extensions = (const char *) glGetString(GL_EXTENSIONS);
 
   /* XXX consider printing a warning to stderr that there's no current
@@ -94,44 +87,26 @@ int FGAPIENTRY glutExtensionSupported( const char* extension )
  */
 void FGAPIENTRY glutReportErrors( void )
 {
-    GLenum error = glGetError();
-
-    /*
-     * Keep reporting errors as long as there are any...
-     */
-    while( error != GL_NO_ERROR )
-    {
-        /*
-         * Print the current error
-         */
-#       undef  G_LOG_DOMAIN
-#       define G_LOG_DOMAIN ((gchar *) 0)
-
+    GLenum error;
+    while( ( error = glGetError() ) != GL_NO_ERROR )
         fgWarning( "GL error: %s", gluErrorString( error ) );
-
-#       undef   G_LOG_DOMAIN
-#       define  G_LOG_DOMAIN  "freeglut_misc.c"
-
-        /*
-         * Grab the next error value
-         */
-        error = glGetError();
-    };
 }
 
 /*
  * Turns the ignore key auto repeat feature on and off
+ *
+ * DEPRECATED 11/4/02 - Do not use
  */
-void FGAPIENTRY glutIgnoreKeyRepeat( int ignore )  /* DEPRECATED 11/4/02 - Do not use */
+void FGAPIENTRY glutIgnoreKeyRepeat( int ignore )
 {
-    /*
-     * This is simple and not damaging...
-     */
-    fgState.IgnoreKeyRepeat = ignore ? TRUE : FALSE;
+    fgState.IgnoreKeyRepeat = ignore ? GL_TRUE : GL_FALSE;
 }
 
 /*
- * Hints the window system whether to generate key auto repeat, or not. This is evil.
+ * Hints the window system whether to generate key auto repeat, or not.
+ * This is evil.
+ *
+ * XXX Is this also deprecated as of 20021104?
  */
 void FGAPIENTRY glutSetKeyRepeat( int repeatMode )
 {
@@ -139,9 +114,6 @@ void FGAPIENTRY glutSetKeyRepeat( int repeatMode )
 
     freeglut_assert_ready;
 
-    /*
-     * This is really evil, but let's have this done.
-     */
     switch( repeatMode )
     {
     case GLUT_KEY_REPEAT_OFF:   XAutoRepeatOff( fgDisplay.Display ); break;
@@ -150,14 +122,7 @@ void FGAPIENTRY glutSetKeyRepeat( int repeatMode )
         {
             XKeyboardState keyboardState;
 
-            /*
-             * Query the current keyboard state
-             */
             XGetKeyboardControl( fgDisplay.Display, &keyboardState );
-
-            /*
-             * Set the auto key repeat basing on the global settings
-             */
             glutSetKeyRepeat(
                 keyboardState.global_auto_repeat == AutoRepeatModeOn ?
                 GLUT_KEY_REPEAT_ON : GLUT_KEY_REPEAT_OFF
@@ -166,9 +131,7 @@ void FGAPIENTRY glutSetKeyRepeat( int repeatMode )
         break;
 
     default:
-        /*
-         * Whoops, this was not expected at all
-         */
+        fgError ("Invalid glutSetKeyRepeat mode: %d", repeatMode);
         break;
     }
 
@@ -181,20 +144,8 @@ void FGAPIENTRY glutSetKeyRepeat( int repeatMode )
 void FGAPIENTRY glutForceJoystickFunc( void )
 {
     freeglut_assert_ready;
-
-    /*
-     * Is there a current window selected?
-     */
     freeglut_return_if_fail( fgStructure.Window != NULL );
-
-    /*
-     * Check if there is a joystick callback hooked to the current window
-     */
-    freeglut_return_if_fail( fgStructure.Window->Callbacks.Joystick != NULL );
-
-    /*
-     * Poll the joystick now, using the current window's joystick callback
-     */
+    freeglut_return_if_fail( FETCH_WCB( *( fgStructure.Window ), Joystick ) );
     fgJoystickPollWindow( fgStructure.Window );
 }
 

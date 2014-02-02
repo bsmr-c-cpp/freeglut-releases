@@ -29,18 +29,20 @@
 #include "config.h"
 #endif
 
-#define  G_LOG_DOMAIN  "freeglut-ext"
+#define GLX_GLXEXT_PROTOTYPES
 
 #include "../include/GL/freeglut.h"
 #include "freeglut_internal.h"
 
 
-struct name_address_pair {
-   const char *name;
-   void *address;
+struct name_address_pair
+{
+    const char *name;
+    void *address;
 };
 
-static struct name_address_pair glut_functions[] = {
+static struct name_address_pair glut_functions[] =
+{
    { "glutInit", (void *) glutInit },
    { "glutInitDisplayMode", (void *) glutInitDisplayMode },
    { "glutInitDisplayString", (void *) glutInitDisplayString },
@@ -175,25 +177,25 @@ static struct name_address_pair glut_functions[] = {
    { "glutWireSierpinskiSponge ", (void *) glutWireSierpinskiSponge },
    { "glutSolidSierpinskiSponge ", (void *) glutSolidSierpinskiSponge },
    { "glutGetProcAddress", (void *) glutGetProcAddress },
+   { "glutMouseWheelFunc", (void *) glutMouseWheelFunc },
    { NULL, NULL }
 };   
 
 
-void * FGAPIENTRY glutGetProcAddress(const char *procName)
+void *FGAPIENTRY glutGetProcAddress( const char *procName )
 {
-   /* Try GLUT functions first */
-   int i;
-   for (i = 0; glut_functions[i].name; i++) {
-      if (strcmp(glut_functions[i].name, procName) == 0)
-         return glut_functions[i].address;
-   }
+    /* Try GLUT functions first */
+    int i;
+    for( i = 0; glut_functions[ i ].name; i++ )
+        if( strcmp( glut_functions[ i ].name, procName ) == 0)
+            return glut_functions[ i ].address;
 
-   /* Try core GL functions */
+    /* Try core GL functions */
 #if TARGET_HOST_WIN32
-  return (void *) wglGetProcAddress((LPCSTR) procName);
-#elif TARGET_HOST_UNIX_X11 && defined(GLX_ARB_get_proc_address)
-  return (void *) glXGetProcAddressARB((const GLubyte *) procName);
+    return( void * )wglGetProcAddress( ( LPCSTR )procName );
+#elif TARGET_HOST_UNIX_X11 && defined( GLX_ARB_get_proc_address )
+    return(void * )glXGetProcAddressARB( ( const GLubyte * )procName );
 #else
-  return NULL;
+    return NULL;
 #endif
 }

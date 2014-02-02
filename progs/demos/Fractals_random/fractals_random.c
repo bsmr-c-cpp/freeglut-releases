@@ -24,6 +24,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#ifdef WIN32
+#include <crtdbg.h>  // DUMP MEMORY LEAKS
+#endif
 
 typedef struct
 {
@@ -44,11 +47,11 @@ static AffineTrans *affine ;
 char window_title [ 80 ] ;
 
 /* The amount the view is translated */
-float xwin = 0.0, ywin = 0.0 ;
-float scale_factor = 1.0 ;
+double xwin = 0.0, ywin = 0.0 ;
+double scale_factor = 1.0 ;
 
 /* The current point */
-float current_x = 0.0, current_y = 0.0 ;
+double current_x = 0.0, current_y = 0.0 ;
 
 /* Signals when a glClear is needed */
 static GLboolean needClear = GL_TRUE;
@@ -60,11 +63,11 @@ static void draw_level ( int num, double m00, double m01, double m10, double m11
 
   for ( i = 0; i < 10; i++ )
   {
-    int random = (rand() >> 10) % num_trans;
-    float new_x = affine[random].a00 * current_x + affine[random].a01 * current_y + affine[random].b0 ;
-    float new_y = affine[random].a10 * current_x + affine[random].a11 * current_y + affine[random].b1 ;
-
-    glVertex2f ( new_x, new_y ) ;
+    int random = ( rand( ) >> 10 ) % num_trans;
+    double new_x = affine[random].a00 * current_x + affine[random].a01 * current_y + affine[random].b0 ;
+    double new_y = affine[random].a10 * current_x + affine[random].a11 * current_y + affine[random].b1 ;
+    
+    glVertex2d ( new_x, new_y ) ;
     current_x = new_x ;
     current_y = new_y ;
   }
@@ -80,7 +83,7 @@ Display(void)
 
   /* the curve */
   glPushMatrix();
-  glScalef(2.5, 2.5, 2.5);
+  glScaled(2.5, 2.5, 2.5);
 
   glColor4f(0.0, 0.0, 0.0, 1.0);
   glBegin ( GL_POINTS ) ;
@@ -109,7 +112,7 @@ Reshape(int width, int height)
   glLoadIdentity();
   xwin = -1.0 ;
   ywin =  0.0 ;
-  glTranslatef(xwin, ywin, -5.0);
+  glTranslated(xwin, ywin, -5.0);
   needClear = GL_TRUE;
 }
 
@@ -128,7 +131,7 @@ Key(unsigned char key, int x, int y)
     glLoadIdentity();
     xwin = -1.0 ;
     ywin = 0.0 ;
-    glTranslatef(xwin, ywin, -5.0);
+    glTranslated(xwin, ywin, -5.0);
     break ;
 
   default:
@@ -144,45 +147,45 @@ static void
 Special(int key, int x, int y)
 {
   int changed_settings = 1;
-  
+
   switch (key) {
   case GLUT_KEY_UP :
     glMatrixMode(GL_MODELVIEW);
     ywin += 0.1 * scale_factor ;
-    glTranslatef(0.0, 0.1 * scale_factor, 0.0);
+    glTranslated(0.0, 0.1 * scale_factor, 0.0);
     break ;
 
   case GLUT_KEY_DOWN :
     glMatrixMode(GL_MODELVIEW);
     ywin -= 0.1 * scale_factor ;
-    glTranslatef(0.0, -0.1 * scale_factor, 0.0);
+    glTranslated(0.0, -0.1 * scale_factor, 0.0);
     break ;
 
   case GLUT_KEY_LEFT :
     glMatrixMode(GL_MODELVIEW);
     xwin -= 0.1 * scale_factor ;
-    glTranslatef(-0.1 * scale_factor, 0.0, 0.0);
+    glTranslated(-0.1 * scale_factor, 0.0, 0.0);
     break ;
 
   case GLUT_KEY_RIGHT :
     glMatrixMode(GL_MODELVIEW);
     xwin += 0.1 * scale_factor ;
-    glTranslatef(0.1 * scale_factor, 0.0, 0.0);
+    glTranslated(0.1 * scale_factor, 0.0, 0.0);
     break ;
 
   case GLUT_KEY_PAGE_UP :
     glMatrixMode(GL_MODELVIEW);
-    glTranslatef ( -xwin, -ywin, 0.0 ) ;
-    glScalef(1.25, 1.25, 1.25);
-    glTranslatef ( xwin, ywin, 0.0 ) ;
+    glTranslated ( -xwin, -ywin, 0.0 ) ;
+    glScaled(1.25, 1.25, 1.25);
+    glTranslated ( xwin, ywin, 0.0 ) ;
     scale_factor *= 0.8 ;
     break ;
 
   case GLUT_KEY_PAGE_DOWN :
     glMatrixMode(GL_MODELVIEW);
-    glTranslatef ( -xwin, -ywin, 0.0 ) ;
-    glScalef(0.8, 0.8, 0.8);
-    glTranslatef ( xwin, ywin, 0.0 ) ;
+    glTranslated ( -xwin, -ywin, 0.0 ) ;
+    glScaled(0.8, 0.8, 0.8);
+    glTranslated ( xwin, ywin, 0.0 ) ;
     scale_factor *= 1.25 ;
     break ;
 
@@ -193,6 +196,59 @@ Special(int key, int x, int y)
   if (changed_settings)
     needClear = GL_TRUE;
 
+  glutPostRedisplay();
+}
+
+
+static int mouse_x = 0, mouse_y = 0 ;
+static int button_down = GLUT_DOWN ;
+
+static void 
+Mouse ( int button, int updown, int x, int y )
+{
+  button_down = updown ;
+
+  if ( updown == GLUT_DOWN )
+  {
+    mouse_x = x ;
+    mouse_y = y ;
+  }
+}
+
+static void 
+MouseMotion ( int x, int y )
+{
+  int window_width  = glutGet ( GLUT_WINDOW_WIDTH  ) ;
+  int window_height = glutGet ( GLUT_WINDOW_HEIGHT ) ;
+  int window_size = ( window_width < window_height ) ? window_width : window_height ;
+
+  double delta_x = 5.0 * (double)(x - mouse_x) / (double)(window_size) ;
+  double delta_y = 5.0 * (double)(y - mouse_y) / (double)(window_size) ;
+
+  xwin += delta_x * scale_factor ;
+  ywin -= delta_y * scale_factor ;
+  glMatrixMode ( GL_MODELVIEW ) ;
+  glTranslated ( delta_x * scale_factor, -delta_y * scale_factor, 0.0 ) ;
+
+  needClear = GL_TRUE;
+  glutPostRedisplay();
+
+  mouse_x = x ;
+  mouse_y = y ;
+}
+
+static void 
+MouseWheel ( int wheel_number, int direction, int x, int y )
+{
+  double scale = ( direction > 0 ) ? 1.25 : 0.8 ;
+
+  glMatrixMode ( GL_MODELVIEW ) ;
+  glTranslated ( -xwin, -ywin, 0.0 ) ;
+  glScaled ( scale, scale, scale ) ;
+  glTranslated ( xwin, ywin, 0.0 ) ;
+  scale_factor /= scale ;
+
+  needClear = GL_TRUE;
   glutPostRedisplay();
 }
 
@@ -300,10 +356,19 @@ main(int argc, char *argv[])
   glutKeyboardFunc(Key);
   glutSpecialFunc(Special);
   glutDisplayFunc(Display);
+  glutMouseFunc(Mouse);
+  glutMotionFunc(MouseMotion);
+  glutMouseWheelFunc(MouseWheel);
 
   glutMainLoop();
 
   printf ( "Back from the 'freeglut' main loop\n" ) ;
+
+  free ( affine ) ;
+
+#ifdef WIN32
+  _CrtDumpMemoryLeaks () ;  // DUMP MEMORY LEAK INFORMATION
+#endif
 
   return 0;             /* ANSI C requires main to return int. */
 }

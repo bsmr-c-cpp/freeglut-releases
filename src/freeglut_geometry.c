@@ -29,9 +29,9 @@
 #include "config.h"
 #endif
 
-#define  G_LOG_DOMAIN  "freeglut-geometry"
-
 #include "../include/GL/freeglut.h"
+
+
 #include "freeglut_internal.h"
 
 /*
@@ -41,13 +41,6 @@
  *
  *      glutWireCube()          -- looks OK
  *      glutSolidCube()         -- OK
- *      glutWireSphere()        -- OK
- *      glutSolidSphere()       -- OK
- *
- * Following functions have been implemented by Pawel and modified by John Fay:
- *
- *      glutWireCone()          -- looks OK
- *      glutSolidCone()         -- looks OK
  *
  * Those functions have been implemented by John Fay.
  *
@@ -61,6 +54,14 @@
  *      glutSolidTetrahedron()  -- looks OK
  *      glutWireIcosahedron()   -- looks OK
  *      glutSolidIcosahedron()  -- looks OK
+ *
+ *  The Following functions have been updated by Nigel Stewart, based
+ *  on FreeGLUT 2.0.0 implementations:
+ *
+ *      glutWireSphere()        -- looks OK
+ *      glutSolidSphere()       -- looks OK
+ *      glutWireCone()          -- looks OK
+ *      glutSolidCone()         -- looks OK
  */
 
 
@@ -117,284 +118,205 @@ void FGAPIENTRY glutSolidCube( GLdouble dSize )
 }
 
 /*
- * Draws a wire sphere. Code contributed by Andreas Umbach <marvin@dataway.ch>
+ * Compute lookup table of cos and sin values forming a cirle
+ *
+ * Notes:
+ *    It is the responsibility of the caller to free these tables
+ *    The size of the table is (n+1) to form a connected loop
+ *    The last entry is exactly the same as the first
+ *    The sign of n can be flipped to get the reverse loop
  */
-void FGAPIENTRY glutWireSphere( GLdouble dRadius, GLint slices, GLint stacks )
+
+static void circleTable(double **sint,double **cost,const int n)
 {
-    double  radius = dRadius, phi, psi, dpsi, dphi;
-    double *vertex;
-    int    i, j;
-    double cphi, sphi, cpsi, spsi ;
+    int i;
 
-    /*
-     * Allocate the vertices array
-     */
-    vertex = (double *)calloc( sizeof(double), 3 * slices * (stacks - 1) );
+    /* Table size, the sign of n flips the circle direction */
 
-    glPushMatrix();
-    glScaled( radius, radius, radius );
+    const int size = abs(n);
 
-    dpsi = M_PI / (stacks + 1);
-    dphi = 2 * M_PI / slices;
-    psi  = dpsi;
+    /* Determine the angle between samples */
 
-    for( j=0; j<stacks-1; j++ )
+    const double angle = 2*M_PI/(double)n;
+
+    /* Allocate memory for n samples, plus duplicate of first entry at the end */
+
+    *sint = (double *) calloc(sizeof(double), size+1);
+    *cost = (double *) calloc(sizeof(double), size+1);
+
+    /* Bail out if memory allocation fails, fgError never returns */
+
+    if (!(*sint) || !(*cost))
     {
-        cpsi = cos ( psi ) ;
-        spsi = sin ( psi ) ;
-        phi = 0.0;
-
-        for( i=0; i<slices; i++ )
-        {
-          int offset = 3 * ( j * slices + i ) ;
-          cphi = cos ( phi ) ;
-          sphi = sin ( phi ) ;
-            *(vertex + offset + 0) = sphi * spsi ;
-            *(vertex + offset + 1) = cphi * spsi ;
-            *(vertex + offset + 2) = cpsi ;
-            phi += dphi;
-        }
-
-        psi += dpsi;
+        free(*sint);
+        free(*cost);
+        fgError("Failed to allocate memory in circleTable");
     }
 
-    for( i=0; i<slices; i++ )
-    {
-        glBegin( GL_LINE_STRIP );
-        glNormal3d( 0, 0, 1 );
-        glVertex3d( 0, 0, 1 );
+    /* Compute cos and sin around the circle */
 
-        for( j=0; j<stacks - 1; j++ )
-        {
-          int offset = 3 * ( j * slices + i ) ;
-            glNormal3dv( vertex + offset );
-            glVertex3dv( vertex + offset );
+    for (i=0; i<size; i++)
+    {
+        (*sint)[i] = sin(angle*i);
+        (*cost)[i] = cos(angle*i);
+    }
+
+    /* Last sample is duplicate of the first */
+
+    (*sint)[size] = (*sint)[0];
+    (*cost)[size] = (*cost)[0];
+}
+
+/*
+ * Draws a solid sphere
+ */
+void FGAPIENTRY glutSolidSphere(GLdouble radius, GLint slices, GLint stacks)
+{
+    int i,j;
+
+    /* Adjust z and radius as stacks are drawn. */
+
+    double z0,z1;
+    double r0,r1;
+
+    /* Pre-computed circle */
+
+    double *sint1,*cost1;
+    double *sint2,*cost2;
+    circleTable(&sint1,&cost1,-slices);
+    circleTable(&sint2,&cost2,stacks*2);
+
+    /* The top stack is covered with a triangle fan */
+
+    z0 = 1.0;
+    z1 = cost2[1];
+    r0 = 0.0;
+    r1 = sint2[1];
+
+    glBegin(GL_TRIANGLE_FAN);
+
+        glNormal3d(0,0,1);
+        glVertex3d(0,0,radius);
+
+        for (j=slices; j>=0; j--)
+        {       
+            glNormal3d(cost1[j]*r1,        sint1[j]*r1,        z1       );
+            glVertex3d(cost1[j]*r1*radius, sint1[j]*r1*radius, z1*radius);
         }
 
-        glNormal3d(0, 0, -1);
-        glVertex3d(0, 0, -1);
+    glEnd();
+
+    /* Cover each stack with a quad strip, except the top and bottom stacks */
+
+    for( i=1; i<stacks-1; i++ )
+    {
+        z0 = z1; z1 = cost2[i+1];
+        r0 = r1; r1 = sint2[i+1];
+
+        glBegin(GL_QUAD_STRIP);
+
+            for(j=0; j<=slices; j++)
+            {
+                glNormal3d(cost1[j]*r1,        sint1[j]*r1,        z1       );
+                glVertex3d(cost1[j]*r1*radius, sint1[j]*r1*radius, z1*radius);
+                glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
+                glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
+            }
+
         glEnd();
     }
 
-    for( j=0; j<stacks-1; j++ )
+    /* The bottom stack is covered with a triangle fan */
+
+    z0 = z1;
+    r0 = r1;
+
+    glBegin(GL_TRIANGLE_FAN);
+
+        glNormal3d(0,0,-1);
+        glVertex3d(0,0,-radius);
+
+        for (j=0; j<=slices; j++)
+        {
+            glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
+            glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
+        }
+
+    glEnd();
+
+    /* Release sin and cos tables */
+
+    free(sint1);
+    free(cost1);
+    free(sint2);
+    free(cost2);
+}
+
+/*
+ * Draws a solid sphere
+ */
+void FGAPIENTRY glutWireSphere(GLdouble radius, GLint slices, GLint stacks)
+{
+    int i,j;
+
+    /* Adjust z and radius as stacks and slices are drawn. */
+
+    double r;
+    double x,y,z;
+
+    /* Pre-computed circle */
+        
+    double *sint1,*cost1;
+    double *sint2,*cost2;
+    circleTable(&sint1,&cost1,-slices  );
+    circleTable(&sint2,&cost2, stacks*2);
+
+    /* Draw a line loop for each stack */
+
+    for (i=1; i<stacks; i++)
     {
+        z = cost2[i];
+        r = sint2[i];
+
         glBegin(GL_LINE_LOOP);
 
-        for( i=0; i<slices; i++ )
-        {
-          int offset = 3 * ( j * slices + i ) ;
-            glNormal3dv( vertex + offset );
-            glVertex3dv( vertex + offset );
-        }
+            for(j=0; j<=slices; j++)
+            {
+                x = cost1[j];
+                y = sint1[j];
+
+                glNormal3d(x,y,z);
+                glVertex3d(x*r*radius,y*r*radius,z*radius);
+            }
 
         glEnd();
     }
 
-    free( vertex );
-    glPopMatrix();
-}
+    /* Draw a line loop for each slice */
 
-/*
- * Draws a solid sphere. Code contributed by Andreas Umbach <marvin@dataway.ch>
- */
-void FGAPIENTRY glutSolidSphere( GLdouble dRadius, GLint slices, GLint stacks )
-{
-    double  radius = dRadius, phi, psi, dpsi, dphi;
-    double *next, *tmp, *row;
-    int    i, j;
-    double cphi, sphi, cpsi, spsi ;
-
-    glPushMatrix();
-    /* glScalef( radius, radius, radius ); */
-
-    row  = (double *)calloc( sizeof(double), slices * 3 );
-    next = (double *)calloc( sizeof(double), slices * 3 );
-
-    dpsi = M_PI / (stacks + 1);
-    dphi = 2 * M_PI / slices;
-    psi  = dpsi;
-    phi  = 0;
-
-    /* init first line + do polar cap */
-    glBegin( GL_TRIANGLE_FAN );
-    glNormal3d( 0.0, 0.0, 1.0 );
-    glVertex3d( 0.0, 0.0, radius );
-
-    for( i=0; i<slices; i++ )
+    for (i=0; i<slices; i++)
     {
-        row[ i * 3 + 0 ] = sin( phi ) * sin( psi );
-        row[ i * 3 + 1 ] = cos( phi ) * sin( psi );
-        row[ i * 3 + 2 ] = cos( psi );
+        glBegin(GL_LINE_STRIP);
 
-        glNormal3dv( row + 3 * i );
-        glVertex3d(
-            radius * *(row + 3 * i + 0),
-            radius * *(row + 3 * i + 1),
-	          radius * *(row + 3 * i + 2)
-	    );
-	
-        phi += dphi;
-    }
+            for(j=0; j<=stacks; j++)
+            {
+                x = cost1[i]*sint2[j];
+                y = sint1[i]*sint2[j];
+                z = cost2[j];
 
-    glNormal3dv( row );
-    glVertex3d( radius * *(row + 0), radius * *(row + 1), radius * *(row + 2) );
-    glEnd();
+                glNormal3d(x,y,z);
+                glVertex3d(x*radius,y*radius,z*radius);
+            }
 
-    for( j=0; j<stacks-1; j++ )
-    {
-        phi = 0.0;
-        psi += dpsi;
-        cpsi = cos ( psi ) ;
-        spsi = sin ( psi ) ;
-
-        /* get coords */
-        glBegin( GL_QUAD_STRIP );
-
-        /* glBegin(GL_LINE_LOOP); */
-        for( i=0; i<slices; i++ )
-        {
-          cphi = cos ( phi ) ;
-          sphi = sin ( phi ) ;
-            next[ i * 3 + 0 ] = sphi * spsi ;
-            next[ i * 3 + 1 ] = cphi * spsi ;
-            next[ i * 3 + 2 ] = cpsi ;
-
-            glNormal3dv( row + i * 3 );
-            glVertex3d(
-                radius * *(row + 3 * i + 0),
-                radius * *(row + 3 * i + 1),
-		        radius * *(row + 3 * i + 2)
-		    );
-
-            glNormal3dv( next + i * 3 );
-            glVertex3d(
-                radius * *(next + 3 * i + 0),
-                radius * *(next + 3 * i + 1),
-                radius * *(next + 3 * i + 2)
-            );
-
-            phi += dphi;
-        }
-
-        glNormal3dv( row );
-        glVertex3d( radius * *(row + 0), radius * *(row + 1), radius * *(row + 2) );
-        glNormal3dv( next );
-        glVertex3d( radius * *(next + 0), radius * *(next + 1), radius * *(next + 2) );
         glEnd();
-
-        tmp = row;
-        row = next;
-        next = tmp;
     }
 
-    /* south pole */
-    glBegin( GL_TRIANGLE_FAN );
-    glNormal3d( 0.0, 0.0, -1.0 );
-    glVertex3d( 0.0, 0.0, -radius );
-    glNormal3dv( row );
-    glVertex3d( radius * *(row + 0), radius * *(row + 1), radius * *(row + 2) );
+    /* Release sin and cos tables */
 
-    for( i=slices-1; i>=0; i-- )
-    {
-        glNormal3dv(row + 3 * i);
-        glVertex3d(
-            radius * *(row + 3 * i + 0),
-            radius * *(row + 3 * i + 1),
-	          radius * *(row + 3 * i + 2)
-	   );
-    }
-
-    glEnd();
-
-    free(row);
-    free(next);
-    glPopMatrix();
-}
-
-/*
- * Draws a wire cone
- */
-void FGAPIENTRY glutWireCone( GLdouble base, GLdouble height, GLint slices, GLint stacks )
-{
-  double  alt   = height / (double) (stacks + 1);
-  double  angle = M_PI / (double) slices * 2.0;
-  double  slope = ( height / base );
-  double  sBase = base ;
-  double  sinNormal = ( base   / sqrt ( height * height + base * base )) ;
-  double  cosNormal = ( height / sqrt ( height * height + base * base )) ;
-
-  double *vertices = NULL;
-  int    i, j;
-
-  /*
-   * We need 'slices' points on a circle
-   */
-  vertices = (double *)calloc( sizeof(double), 2 * (slices + 1) );
-
-  for( j=0; j<slices+1; j++ )
-  {
-    vertices[ j*2 + 0 ] = cos( angle * j );
-    vertices[ j*2 + 1 ] = sin( angle * j );
-  }
-
-  /*
-   * First the cone's bottom...
-   */
-  for( j=0; j<slices; j++ )
-  {
-    glBegin( GL_LINE_LOOP );
-      glNormal3d( 0.0, 0.0, -1.0 );
-      glVertex3d( vertices[ (j+0)*2+0 ] * sBase, vertices[ (j+0)*2+1 ] * sBase, 0 );
-      glVertex3d( vertices[ (j+1)*2+0 ] * sBase, vertices[ (j+1)*2+1 ] * sBase, 0 );
-      glVertex3d( 0.0, 0.0, 0.0 );
-    glEnd();
-  }
-
-  /*
-   * Then all the stacks between the bottom and the top
-   */
-  for( i=0; i<stacks; i++ )
-  {
-    double alt_a = i * alt, alt_b = (i + 1) * alt;
-    double scl_a = (height - alt_a) / slope;
-    double scl_b = (height - alt_b) / slope;
-
-    for( j=0; j<slices; j++ )
-    {
-      glBegin( GL_LINE_LOOP );
-        glNormal3d( sinNormal * vertices[(j+0)*2+0], sinNormal * vertices[(j+0)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+0)*2+0] * scl_a, vertices[(j+0)*2+1] * scl_a, alt_a );
-        glNormal3d( sinNormal * vertices[(j+1)*2+0], sinNormal * vertices[(j+1)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+1)*2+0] * scl_a, vertices[(j+1)*2+1] * scl_a, alt_a );
-        glNormal3d( sinNormal * vertices[(j+0)*2+0], sinNormal * vertices[(j+0)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+0)*2+0] * scl_b, vertices[(j+0)*2+1] * scl_b, alt_b );
-      glEnd();
-
-      glBegin( GL_LINE_LOOP );
-        glNormal3d( sinNormal * vertices[(j+0)*2+0], sinNormal * vertices[(j+0)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+0)*2+0] * scl_b, vertices[(j+0)*2+1] * scl_b, alt_b );
-        glNormal3d( sinNormal * vertices[(j+1)*2+0], sinNormal * vertices[(j+1)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+1)*2+0] * scl_b, vertices[(j+1)*2+1] * scl_b, alt_b );
-        glVertex3d( vertices[(j+1)*2+0] * scl_a, vertices[(j+1)*2+1] * scl_a, alt_a );
-      glEnd();
-    }
-  }
-
-  /*
-   * Finally have the top part drawn...
-   */
-  for( j=0; j<slices; j++ )
-  {
-    double scl = alt / slope;
-
-    glBegin( GL_LINE_LOOP );
-      glNormal3d( sinNormal * vertices[(j+0)*2+0], sinNormal * vertices[(j+0)*2+1], cosNormal ) ;
-      glVertex3d( vertices[ (j+0)*2+0 ] * scl, vertices[ (j+0)*2+1 ] * scl, height - alt );
-      glNormal3d( sinNormal * vertices[(j+1)*2+0], sinNormal * vertices[(j+1)*2+1], cosNormal ) ;
-      glVertex3d( vertices[ (j+1)*2+0 ] * scl, vertices[ (j+1)*2+1 ] * scl, height - alt );
-      glVertex3d( 0, 0, height );
-    glEnd();
-  }
+    free(sint1);
+    free(cost1);
+    free(sint2);
+    free(cost2);
 }
 
 /*
@@ -402,87 +324,265 @@ void FGAPIENTRY glutWireCone( GLdouble base, GLdouble height, GLint slices, GLin
  */
 void FGAPIENTRY glutSolidCone( GLdouble base, GLdouble height, GLint slices, GLint stacks )
 {
-  double  alt   = height / (double) (stacks + 1);
-  double  angle = M_PI / (double) slices * 2.0f;
-  double  slope = ( height / base );
-  double  sBase = base ;
-  double  sinNormal = ( base   / sqrt ( height * height + base * base )) ;
-  double  cosNormal = ( height / sqrt ( height * height + base * base )) ;
+    int i,j;
 
-  double *vertices = NULL;
-  int    i, j;
+    /* Step in z and radius as stacks are drawn. */
 
-  /*
-   * We need 'slices' points on a circle
-   */
-  vertices = (double *)calloc( sizeof(double), 2 * (slices + 1) );
+    double z0,z1;
+    double r0,r1;
 
-  for( j=0; j<slices+1; j++ )
-  {
-    vertices[ j*2 + 0 ] = cos( angle * j );
-    vertices[ j*2 + 1 ] = sin( angle * j );
-  }
+    const double zStep = height/stacks;
+    const double rStep = base/stacks;
 
-  /*
-   * First the cone's bottom...
-   */
-  for( j=0; j<slices; j++ )
-  {
-    double scl = height / slope;
+    /* Scaling factors for vertex normals */
 
-    glBegin( GL_TRIANGLES );
-      glNormal3d( 0.0, 0.0, -1.0 );
-      glVertex3d( vertices[ (j+0)*2+0 ] * sBase, vertices[ (j+0)*2+1 ] * sBase, 0 );
-      glVertex3d( vertices[ (j+1)*2+0 ] * sBase, vertices[ (j+1)*2+1 ] * sBase, 0 );
-      glVertex3d( 0.0, 0.0, 0.0 );
+    const double cosn = ( height / sqrt ( height * height + base * base ));
+    const double sinn = ( base   / sqrt ( height * height + base * base ));
+
+    /* Pre-computed circle */
+
+    double *sint,*cost;
+    circleTable(&sint,&cost,-slices);
+
+    /* Cover the circular base with a triangle fan... */
+
+    z0 = 0.0;
+    z1 = zStep;
+
+    r0 = base;
+    r1 = r0 - rStep;
+
+    glBegin(GL_TRIANGLE_FAN);
+
+        glNormal3d(0.0,0.0,-1.0);
+        glVertex3d(0.0,0.0, z0 );
+
+        for (j=0; j<=slices; j++)
+            glVertex3d(cost[j]*r0, sint[j]*r0, z0);
+
     glEnd();
-  }
 
-  /*
-   * Then all the stacks between the bottom and the top
-   */
-  for( i=0; i<stacks; i++ )
-  {
-    double alt_a = i * alt, alt_b = (i + 1) * alt;
-    double scl_a = (height - alt_a) / slope;
-    double scl_b = (height - alt_b) / slope;
+    /* Cover each stack with a quad strip, except the top stack */
 
-    for( j=0; j<slices; j++ )
+    for( i=0; i<stacks-1; i++ )
     {
-      glBegin( GL_TRIANGLES );
-        glNormal3d( sinNormal * vertices[(j+0)*2+0], sinNormal * vertices[(j+0)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+0)*2+0] * scl_a, vertices[(j+0)*2+1] * scl_a, alt_a );
-        glNormal3d( sinNormal * vertices[(j+1)*2+0], sinNormal * vertices[(j+1)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+1)*2+0] * scl_a, vertices[(j+1)*2+1] * scl_a, alt_a );
-        glNormal3d( sinNormal * vertices[(j+0)*2+0], sinNormal * vertices[(j+0)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+0)*2+0] * scl_b, vertices[(j+0)*2+1] * scl_b, alt_b );
-      glEnd();
+        glBegin(GL_QUAD_STRIP);
 
-      glBegin( GL_TRIANGLES );
-        glNormal3d( sinNormal * vertices[(j+0)*2+0], sinNormal * vertices[(j+0)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+0)*2+0] * scl_b, vertices[(j+0)*2+1] * scl_b, alt_b );
-        glNormal3d( sinNormal * vertices[(j+1)*2+0], sinNormal * vertices[(j+1)*2+1], cosNormal ) ;
-        glVertex3d( vertices[(j+1)*2+0] * scl_b, vertices[(j+1)*2+1] * scl_b, alt_b );
-        glVertex3d( vertices[(j+1)*2+0] * scl_a, vertices[(j+1)*2+1] * scl_a, alt_a );
-      glEnd();
+            for(j=0; j<=slices; j++)
+            {
+                glNormal3d(cost[j]*sinn, sint[j]*sinn, cosn);
+                glVertex3d(cost[j]*r0,   sint[j]*r0,   z0  );
+                glVertex3d(cost[j]*r1,   sint[j]*r1,   z1  );
+            }
+
+            z0 = z1; z1 += zStep;
+            r0 = r1; r1 -= rStep;
+
+        glEnd();
     }
-  }
 
-  /*
-   * Finally have the top part drawn...
-   */
-  for( j=0; j<slices; j++ )
-  {
-    double scl = alt / slope;
+    /* The top stack is covered with individual triangles */
 
-    glBegin( GL_TRIANGLES );
-      glNormal3d( sinNormal * vertices[(j+0)*2+0], sinNormal * vertices[(j+0)*2+1], cosNormal ) ;
-      glVertex3d( vertices[ (j+0)*2+0 ] * scl, vertices[ (j+0)*2+1 ] * scl, height - alt );
-      glNormal3d( sinNormal * vertices[(j+1)*2+0], sinNormal * vertices[(j+1)*2+1], cosNormal ) ;
-      glVertex3d( vertices[ (j+1)*2+0 ] * scl, vertices[ (j+1)*2+1 ] * scl, height - alt );
-      glVertex3d( 0, 0, height );
+    glBegin(GL_TRIANGLES);
+
+        glNormal3d(cost[0]*sinn, sint[0]*sinn, cosn);
+
+        for (j=0; j<slices; j++)
+        {
+            glVertex3d(cost[j+0]*r0,   sint[j+0]*r0,   z0    );
+            glVertex3d(0,              0,              height);
+            glNormal3d(cost[j+1]*sinn, sint[j+1]*sinn, cosn  );
+            glVertex3d(cost[j+1]*r0,   sint[j+1]*r0,   z0    );
+        }
+
     glEnd();
-  }
+
+    /* Release sin and cos tables */
+
+    free(sint);
+    free(cost);
+}
+
+/*
+ * Draws a wire cone
+ */
+void FGAPIENTRY glutWireCone( GLdouble base, GLdouble height, GLint slices, GLint stacks)
+{
+    int i,j;
+
+    /* Step in z and radius as stacks are drawn. */
+
+    double z = 0.0;
+    double r = base;
+
+    const double zStep = height/stacks;
+    const double rStep = base/stacks;
+
+    /* Scaling factors for vertex normals */
+
+    const double cosn = ( height / sqrt ( height * height + base * base ));
+    const double sinn = ( base   / sqrt ( height * height + base * base ));
+
+    /* Pre-computed circle */
+
+    double *sint,*cost;
+    circleTable(&sint,&cost,-slices);
+
+    /* Draw the stacks... */
+
+    for (i=0; i<stacks; i++)
+    {
+        glBegin(GL_LINE_LOOP);
+
+            for( j=0; j<slices; j++ )
+            {
+                glNormal3d(cost[j]*sinn, sint[j]*sinn, cosn);
+                glVertex3d(cost[j]*r,    sint[j]*r,    z   );
+            }
+
+        glEnd();
+
+        z += zStep;
+        r -= rStep;
+    }
+
+    /* Draw the slices */
+
+    r = base;
+
+    glBegin(GL_LINES);
+
+        for (j=0; j<slices; j++)
+        {
+            glNormal3d(cost[j]*sinn, sint[j]*sinn, cosn  );
+            glVertex3d(cost[j]*r,    sint[j]*r,    0.0   );
+            glVertex3d(0.0,          0.0,          height);
+        }
+
+    glEnd();
+
+    /* Release sin and cos tables */
+
+    free(sint);
+    free(cost);
+}
+
+
+/*
+ * Draws a solid cylinder
+ */
+void FGAPIENTRY glutSolidCylinder(GLdouble radius, GLdouble height, GLint slices, GLint stacks)
+{
+    int i,j;
+
+    /* Step in z and radius as stacks are drawn. */
+
+          double z0,z1;
+    const double zStep = height/stacks;
+
+    /* Pre-computed circle */
+
+    double *sint,*cost;
+    circleTable(&sint,&cost,-slices);
+
+    /* Cover the base and top */
+
+    glBegin(GL_TRIANGLE_FAN);
+        glNormal3d(0.0, 0.0, -1.0 );
+        glVertex3d(0.0, 0.0,  0.0 );
+        for (j=0; j<=slices; j++)
+          glVertex3d(cost[j]*radius, sint[j]*radius, 0.0);
+    glEnd();
+
+    glBegin(GL_TRIANGLE_FAN);
+        glNormal3d(0.0, 0.0, 1.0   );
+        glVertex3d(0.0, 0.0, height);
+        for (j=slices; j>=0; j--)
+          glVertex3d(cost[j]*radius, sint[j]*radius, height);
+    glEnd();
+
+    /* Do the stacks */
+
+    z0 = 0.0;
+    z1 = zStep;
+
+    for (i=1; i<=stacks; i++)
+    {
+        if (i==stacks)
+            z1 = height;
+
+        glBegin(GL_QUAD_STRIP);
+            for (j=0; j<=slices; j++ )
+            {
+                glNormal3d(cost[j],        sint[j],        0.0 );
+                glVertex3d(cost[j]*radius, sint[j]*radius, z0  );
+                glVertex3d(cost[j]*radius, sint[j]*radius, z1  );
+            }
+        glEnd();
+
+        z0 = z1; z1 += zStep;
+    }
+
+    /* Release sin and cos tables */
+
+    free(sint);
+    free(cost);
+}
+
+/*
+ * Draws a wire cylinder
+   */
+void FGAPIENTRY glutWireCylinder(GLdouble radius, GLdouble height, GLint slices, GLint stacks)
+{
+    int i,j;
+
+    /* Step in z and radius as stacks are drawn. */
+
+          double z = 0.0;
+    const double zStep = height/stacks;
+
+    /* Pre-computed circle */
+
+    double *sint,*cost;
+    circleTable(&sint,&cost,-slices);
+
+    /* Draw the stacks... */
+
+    for (i=0; i<=stacks; i++)
+    {
+        if (i==stacks)
+            z = height;
+
+        glBegin(GL_LINE_LOOP);
+
+            for( j=0; j<slices; j++ )
+            {
+                glNormal3d(cost[j],        sint[j],        0.0);
+                glVertex3d(cost[j]*radius, sint[j]*radius, z  );
+            }
+
+        glEnd();
+
+        z += zStep;
+    }
+
+    /* Draw the slices */
+
+    glBegin(GL_LINES);
+
+        for (j=0; j<slices; j++)
+        {
+            glNormal3d(cost[j],        sint[j],        0.0   );
+            glVertex3d(cost[j]*radius, sint[j]*radius, 0.0   );
+            glVertex3d(cost[j]*radius, sint[j]*radius, height);
+        }
+
+    glEnd();
+
+    /* Release sin and cos tables */
+
+    free(sint);
+    free(cost);
 }
 
 /*
@@ -503,8 +603,8 @@ void FGAPIENTRY glutWireTorus( GLdouble dInnerRadius, GLdouble dOuterRadius, GLi
 
   glPushMatrix();
 
-  dpsi = 2.0 * M_PI / (double)nRings ;
-  dphi = 2.0 * M_PI / (double)nSides ;
+  dpsi =  2.0 * M_PI / (double)nRings ;
+  dphi = -2.0 * M_PI / (double)nSides ;
   psi  = 0.0;
 
   for( j=0; j<nRings; j++ )
@@ -520,7 +620,7 @@ void FGAPIENTRY glutWireTorus( GLdouble dInnerRadius, GLdouble dOuterRadius, GLi
       sphi = sin ( phi ) ;
       *(vertex + offset + 0) = cpsi * ( oradius + cphi * iradius ) ;
       *(vertex + offset + 1) = spsi * ( oradius + cphi * iradius ) ;
-      *(vertex + offset + 2) =                    sphi * iradius   ;
+      *(vertex + offset + 2) =                    sphi * iradius  ;
       *(normal + offset + 0) = cpsi * cphi ;
       *(normal + offset + 1) = spsi * cphi ;
       *(normal + offset + 2) =        sphi ;
@@ -587,8 +687,8 @@ void FGAPIENTRY glutSolidTorus( GLdouble dInnerRadius, GLdouble dOuterRadius, GL
 
   glPushMatrix();
 
-  dpsi = 2.0 * M_PI / (double)(nRings - 1) ;
-  dphi = 2.0 * M_PI / (double)(nSides - 1) ;
+  dpsi =  2.0 * M_PI / (double)(nRings - 1) ;
+  dphi = -2.0 * M_PI / (double)(nSides - 1) ;
   psi  = 0.0;
 
   for( j=0; j<nRings; j++ )
@@ -604,7 +704,7 @@ void FGAPIENTRY glutSolidTorus( GLdouble dInnerRadius, GLdouble dOuterRadius, GL
       sphi = sin ( phi ) ;
       *(vertex + offset + 0) = cpsi * ( oradius + cphi * iradius ) ;
       *(vertex + offset + 1) = spsi * ( oradius + cphi * iradius ) ;
-      *(vertex + offset + 2) =                    sphi * iradius   ;
+      *(vertex + offset + 2) =                    sphi * iradius  ;
       *(normal + offset + 0) = cpsi * cphi ;
       *(normal + offset + 1) = spsi * cphi ;
       *(normal + offset + 2) =        sphi ;
