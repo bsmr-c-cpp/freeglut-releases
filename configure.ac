@@ -1,21 +1,24 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([freeglut library], [2.6.0], [freeglut-bugs@lists.sourceforge.net], [freeglut])
+AC_INIT([freeglut library],[2.8.1],[freeglut-bugs@lists.sourceforge.net],[freeglut])
 AM_INIT_AUTOMAKE
-AC_PREREQ([2.56])
+AC_PREREQ([2.69])
 AC_CONFIG_SRCDIR([AUTHORS])
 AC_CONFIG_HEADERS([config.h])
 
 # Compatibility hack for older autoconf versions
-m4_ifdef([AS_HELP_STRING], [], [AC_DEFUN([AS_HELP_STRING], [AC_HELP_STRING($][@)])])
+m4_ifdef([AS_HELP_STRING], [], [AC_DEFUN([AS_HELP_STRING], [AS_HELP_STRING([$@])])])
 
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_C_CONST
 AC_EXEEXT
-AC_LIBTOOL_DLOPEN
-AC_PROG_LIBTOOL
+_LT_SET_OPTION([LT_INIT],[dlopen])
+AC_DIAGNOSE([obsolete],[AC_LIBTOOL_DLOPEN: Remove this warning and the call to _LT_SET_OPTION when you
+put the `dlopen' option into LT_INIT's first parameter.])
+
+LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
 
 # Checks for libraries.
@@ -46,6 +49,9 @@ AC_CHECK_LIB([usbhid], [hid_init],
              [LIBUSBHID=-lusbhid], [LIBUSBHID=])
 AC_SUBST(LIBUSBHID)
 
+# check for posix clock and add -lrt
+AC_SEARCH_LIBS([clock_gettime], rt)
+
 # Checks for header files.
 AC_HEADER_STDC
 save_CPPFLAGS="$CPPFLAGS"
@@ -61,7 +67,7 @@ CPPFLAGS="$save_CPPFLAGS"
 # Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_VPRINTF
-AC_CHECK_LIBM
+LT_LIB_M
 AC_SUBST([LIBM])
 AC_CHECK_FUNCS([gettimeofday])
 AC_CHECK_FUNCS([vfprintf])
