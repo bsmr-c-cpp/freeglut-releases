@@ -21,7 +21,7 @@ AC_SUBST([LIBTOOL_DEPS])
 # Checks for libraries.
 AC_PATH_XTRA
 
-if test x"$no_x" = xyes; then
+if test "x$no_x" = xyes; then
   GL_LIBS="-lopengl32 -lgdi32 -lwinmm"
   LIBXXF86VM=
   LIBXI=
@@ -29,9 +29,9 @@ if test x"$no_x" = xyes; then
   EXPORT_FLAGS="-DFREEGLUT_EXPORTS"
 else
   GL_LIBS="-lGL -lXext -lX11"
-  AC_CHECK_LIB([Xxf86vm], [XF86VidModeSwitchToMode],
-               [LIBXXF86VM=-lXxf86vm], [LIBXXF86VM=],
-               [$X_LIBS -lXext -lX11])
+  AC_CHECK_LIB([Xxf86vm], [XF86VidModeSwitchToMode])
+  AC_CHECK_LIB([Xrandr], [XRRQueryExtension])
+  AC_CHECK_LIB([Xi], [XISelectEvents])
   LIBXI=-lXi
   VERSION_INFO="-version-info 12:0:9"
   EXPORT_FLAGS=
@@ -42,14 +42,20 @@ AC_SUBST([LIBXI])
 AC_SUBST([VERSION_INFO])
 AC_SUBST([EXPORT_FLAGS])
 
+AC_CHECK_LIB([usbhid], [hid_init],
+             [LIBUSBHID=-lusbhid], [LIBUSBHID=])
+AC_SUBST(LIBUSBHID)
+
 # Checks for header files.
 AC_HEADER_STDC
 save_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$CPPFLAGS $X_CFLAGS"
-AC_CHECK_HEADERS([GL/gl.h GL/glu.h GL/glx.h fcntl.h limits.h sys/ioctl.h sys/param.h sys/time.h])
+AC_CHECK_HEADERS([usbhid.h libusbhid.h errno.h GL/gl.h GL/glu.h GL/glx.h fcntl.h limits.h sys/ioctl.h sys/param.h sys/time.h])
 AC_HEADER_TIME
 AC_CHECK_HEADERS([X11/extensions/xf86vmode.h], [], [], [#include <X11/Xlib.h>])
+AC_CHECK_HEADERS([X11/extensions/Xrandr.h])
 AC_CHECK_HEADERS([X11/extensions/XI.h X11/extensions/XInput.h])
+AC_CHECK_HEADERS([X11/extensions/XInput2.h])
 CPPFLAGS="$save_CPPFLAGS"
 
 # Checks for library functions.
@@ -58,6 +64,7 @@ AC_FUNC_VPRINTF
 AC_CHECK_LIBM
 AC_SUBST([LIBM])
 AC_CHECK_FUNCS([gettimeofday])
+AC_CHECK_FUNCS([vfprintf])
 
 # Build time configuration.
 AC_ARG_ENABLE([replace-glut],
@@ -95,5 +102,22 @@ if test "x$enable_debug" = xyes; then
 fi
 
 # Generate output.
-AC_CONFIG_FILES([Makefile doc/Makefile include/GL/Makefile include/Makefile progs/Makefile progs/demos/CallbackMaker/Makefile progs/demos/Fractals/Makefile progs/demos/Fractals_random/Makefile progs/demos/Lorenz/Makefile progs/demos/Makefile progs/demos/One/Makefile progs/demos/shapes/Makefile progs/demos/smooth_opengl3/Makefile progs/demos/spaceball/Makefile src/Makefile])
+AC_CONFIG_FILES([
+	Makefile
+	doc/Makefile
+	include/GL/Makefile
+	include/Makefile
+	progs/Makefile
+	progs/demos/CallbackMaker/Makefile
+	progs/demos/Fractals/Makefile
+	progs/demos/Fractals_random/Makefile
+	progs/demos/Lorenz/Makefile
+	progs/demos/Makefile
+	progs/demos/One/Makefile
+	progs/demos/shapes/Makefile
+	progs/demos/smooth_opengl3/Makefile
+	progs/demos/spaceball/Makefile
+	progs/demos/subwin/Makefile
+	src/Makefile
+])
 AC_OUTPUT
