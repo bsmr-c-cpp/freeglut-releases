@@ -41,7 +41,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef WIN32
+#ifdef _MSC_VER
 /* DUMP MEMORY LEAKS */
 #include <crtdbg.h>
 #endif
@@ -180,15 +180,6 @@ static const entry table [] =
 
     Limitation: Cannot address pixels.
     Limitation: Renders in screen coords, not model coords.
-
-    \note Uses a fixed, 256-byte array for holding strings.
-          The best way around this would be to use vasprintf(),
-          but that is not available on WIN32, I believe.
-          Another alternative would be to write our own formatter
-          from scratch and emit the characters one at a time to
-          the GLUT bitmap single-character drawing routine.
-          We could also use vsnprintf(), but I'm not sure if
-          that is standard...
 */
 static void shapesPrintf (int row, int col, const char *fmt, ...)
 {
@@ -198,7 +189,11 @@ static void shapesPrintf (int row, int col, const char *fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    (void) vsprintf (buf, fmt, args);
+#if defined(WIN32) && !defined(__CYGWIN__)
+    (void) _vsnprintf (buf, sizeof(buf), fmt, args);
+#else
+    (void) vsnprintf (buf, sizeof(buf), fmt, args);
+#endif
     va_end(args);
 
     glGetIntegerv(GL_VIEWPORT,viewport);
@@ -369,7 +364,7 @@ main(int argc, char *argv[])
     glutInitWindowSize(640,480);
     glutInitWindowPosition(40,40);
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
 
     glutCreateWindow("OpenGLUT Shapes");
 
@@ -404,7 +399,7 @@ main(int argc, char *argv[])
 
     glutMainLoop();
 
-#ifdef WIN32
+#ifdef _MSC_VER
     /* DUMP MEMORY LEAK INFORMATION */
     _CrtDumpMemoryLeaks () ;
 #endif

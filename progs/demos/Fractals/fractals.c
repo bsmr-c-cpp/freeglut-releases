@@ -33,11 +33,14 @@ typedef struct
 AffineTrans ;
 
 /* Number of levels to draw the fractal */
-static int num_levels = 0 ;
+static int num_levels = 4 ;
 
 /* The definition of the fractal */
 static int num_trans ;
 static AffineTrans *affine ;
+
+/* Flag telling us to keep executing the main loop */
+static int continue_in_main_loop = 1;
 
 /* the window title */
 char window_title [ 80 ] ;
@@ -125,7 +128,7 @@ Key(unsigned char key, int x, int y)
   
   switch (key) {
   case 27:  /* Escape key */
-    glutLeaveMainLoop () ;
+    continue_in_main_loop = 0 ;
     break;
 
   case '+' :
@@ -208,6 +211,16 @@ Special(int key, int x, int y)
 }
 
 
+static void
+checkedFGets ( char *s, int size, FILE *stream )
+{
+  if ( fgets ( s, size, stream ) == NULL ) {
+    fprintf ( stderr, "fgets failed\n");
+    exit ( EXIT_FAILURE );
+  }
+}
+
+
 void readConfigFile ( char *fnme )
 {
   FILE *fptr = fopen ( fnme, "rt" ) ;
@@ -217,13 +230,13 @@ void readConfigFile ( char *fnme )
   if ( fptr )
   {
     /* Read a header line */
-    fgets ( inputline, 256, fptr ) ;
+    checkedFGets ( inputline, sizeof ( inputline ), fptr ) ;
 
     /* Read a comment line */
-    fgets ( inputline, 256, fptr ) ;
+    checkedFGets ( inputline, sizeof ( inputline ), fptr ) ;
 
     /* Read the window title */
-    fgets ( inputline, 256, fptr ) ;
+    checkedFGets ( inputline, sizeof ( inputline ), fptr ) ;
     /* We assume here that this line will not exceed 79 characters plus a 
        newline (window_title is 80 characters long). That'll cause a buffer 
        overflow. For a simple program like  this, though, we're letting it 
@@ -232,21 +245,21 @@ void readConfigFile ( char *fnme )
     sscanf ( inputline, "%[a-zA-Z0-9!@#$%^&*()+=/\\_-\" ]", window_title ) ; 
 
     /* Read a comment line */
-    fgets ( inputline, 256, fptr ) ;
+    checkedFGets ( inputline, sizeof ( inputline ), fptr ) ;
 
     /* Read the number of affine transformations */
-    fgets ( inputline, 256, fptr ) ;
+    checkedFGets ( inputline, sizeof ( inputline ), fptr ) ;
     sscanf ( inputline, "%d", &num_trans ) ;
 
     affine = (AffineTrans *)malloc ( num_trans * sizeof(AffineTrans) ) ;
 
     /* Read a comment line */
-    fgets ( inputline, 256, fptr ) ;
+    checkedFGets ( inputline, sizeof ( inputline ), fptr ) ;
 
     for ( i = 0; i < num_trans; i++ )
     {
       /* Read an affine transformation definition */
-      fgets ( inputline, 256, fptr ) ;
+      checkedFGets ( inputline, sizeof ( inputline ), fptr ) ;
       sscanf ( inputline, "%lf %lf %lf %lf %lf %lf", &affine[i].a00, &affine[i].a01,
                        &affine[i].a10, &affine[i].a11, &affine[i].b0, &affine[i].b1 ) ;
     }
@@ -311,7 +324,11 @@ main(int argc, char *argv[])
   glutSpecialFunc(Special);
   glutDisplayFunc(Display);
 
-  glutMainLoop();
+#ifdef WIN32
+#endif
+
+  while ( continue_in_main_loop )
+    glutMainLoopEvent();
 
   printf ( "Back from the 'freeglut' main loop\n" ) ;
 

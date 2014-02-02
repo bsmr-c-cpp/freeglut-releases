@@ -1,6 +1,5 @@
-LIBRARY freeglutdll
-DESCRIPTION "Freeglut OpenGL Utility Toolkit"
-VERSION 2.4.0
+LIBRARY freeglut
+VERSION 2.6
 EXPORTS
 	glutInit
 	glutInitWindowPosition
@@ -15,6 +14,8 @@ EXPORTS
 	glutDestroyWindow
 	glutSetWindow
 	glutGetWindow
+	glutSetWindowData
+	glutGetWindowData
 	glutSetWindowTitle
 	glutSetIconTitle
 	glutReshapeWindow
@@ -41,6 +42,8 @@ EXPORTS
 	glutDestroyMenu
 	glutGetMenu
 	glutSetMenu
+	glutGetMenuData
+	glutSetMenuData
 	glutAddMenuEntry
 	glutAddSubMenu
 	glutChangeToMenuEntry
@@ -56,6 +59,7 @@ EXPORTS
 	glutVisibilityFunc
 	glutDisplayFunc
 	glutMouseFunc
+	glutMouseWheelFunc
 	glutMotionFunc
 	glutPassiveMotionFunc
 	glutEntryFunc
@@ -66,6 +70,7 @@ EXPORTS
 	glutJoystickFunc
 	glutMenuStateFunc
 	glutMenuStatusFunc
+	glutMenuDestroyFunc
 	glutOverlayDisplayFunc
 	glutWindowStatusFunc
 	glutSpaceballMotionFunc
@@ -112,6 +117,8 @@ EXPORTS
 	glutSolidSierpinskiSponge
 	glutWireTeapot
 	glutSolidTeapot
+	glutWireCylinder
+	glutSolidCylinder
 	glutGameModeString
 	glutEnterGameMode
 	glutLeaveGameMode
@@ -129,4 +136,13 @@ EXPORTS
 	glutForceJoystickFunc
 	glutExtensionSupported
 	glutReportErrors
-
+	glutGetProcAddress
+	glutExit
+	glutFullScreenToggle
+	glutGetModeValues
+	glutInitContextFlags
+	glutInitContextVersion
+	glutInitContextProfile
+	__glutInitWithExit
+	__glutCreateWindowWithExit
+	__glutCreateMenuWithExit

@@ -27,6 +27,8 @@ lib@LIBRARY@_la_SOURCES = freeglut_callbacks.c \
 			 freeglut_gamemode.c \
 			 freeglut_geometry.c \
 			 freeglut_init.c \
+			 freeglut_input_devices.c \
+			 freeglut_spaceball.c \
 			 freeglut_joystick.c \
 			 freeglut_main.c \
 			 freeglut_menu.c \
@@ -41,11 +43,10 @@ lib@LIBRARY@_la_SOURCES = freeglut_callbacks.c \
 #
 # Additional linker flags
 #	 
-lib@LIBRARY@_la_LIBADD = $(LIBM) $(X_LIBS) -lGL -lGLU -lXext -lX11 $(LIBXXF86VM)
-lib@LIBRARY@_la_LDFLAGS = -version-info 11:0:8
-lib@LIBRARY@_la_CFLAGS = $(X_CFLAGS)
-
-INCLUDES = -I$(top_srcdir)/include
+lib@LIBRARY@_la_LIBADD  = $(LIBM) $(X_LIBS) $(GL_LIBS) $(LIBXXF86VM) $(LIBXI)
+lib@LIBRARY@_la_LDFLAGS = $(VERSION_INFO) -no-undefined
+lib@LIBRARY@_la_CFLAGS  = $(X_CFLAGS) $(EXPORT_FLAGS)
+lib@LIBRARY@_la_CPPFLAGS= -I$(top_srcdir)/include
 
 #
 # End of file

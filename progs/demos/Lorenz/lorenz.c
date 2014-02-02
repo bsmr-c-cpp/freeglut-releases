@@ -29,10 +29,11 @@
 /* Include Files */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <math.h>
 #include <GL/freeglut.h>
-#ifdef WIN32
+#ifdef _MSC_VER
 /* DUMP MEMORY LEAKS */
 #include <crtdbg.h>
 #endif
@@ -107,6 +108,16 @@ void advance_in_time ( double time_step, double position[3], double new_position
                       ( deriv0[i] + 2.0 * ( deriv1[i] + deriv2[i] ) + deriv3[i] ) ;
 }
 
+static void
+checkedFGets ( char *s, int size, FILE *stream )
+{
+  if ( fgets ( s, size, stream ) == NULL ) {
+    fprintf ( stderr, "fgets failed\n");
+    exit ( EXIT_FAILURE );
+  }
+}
+
+
 /* GLUT callbacks */
 
 #define INPUT_LINE_LENGTH 80
@@ -142,15 +153,15 @@ void key_cb ( unsigned char key, int x, int y )
 
   case 'm' :  case 'M' :  /* Modify the Lorenz parameters */
     printf ( "Please enter new value for <sigma> (default %f, currently %f): ", s0, sigma ) ;
-    fgets ( inputline, INPUT_LINE_LENGTH-1, stdin ) ;
+    checkedFGets ( inputline, sizeof ( inputline ), stdin ) ;
     sscanf ( inputline, "%lf", &sigma ) ;
 
     printf ( "Please enter new value for <b> (default %f, currently %f): ", b0, b ) ;
-    fgets ( inputline, INPUT_LINE_LENGTH-1, stdin ) ;
+    checkedFGets ( inputline, sizeof ( inputline ), stdin ) ;
     sscanf ( inputline, "%lf", &b ) ;
 
     printf ( "Please enter new value for <r> (default %f, currently %f): ", r0, r ) ;
-    fgets ( inputline, INPUT_LINE_LENGTH-1, stdin ) ;
+    checkedFGets ( inputline, sizeof ( inputline ), stdin ) ;
     sscanf ( inputline, "%lf", &r ) ;
 
     break ;
@@ -232,10 +243,23 @@ void draw_curve ( int index, double position [ NUM_POINTS ][3] )
   glEnd () ;
 }
 
+void bitmapPrintf (const char *fmt, ...)
+{
+    static char buf[256];
+    va_list args;
+
+    va_start(args, fmt);
+#if defined(WIN32) && !defined(__CYGWIN__)
+    (void) _vsnprintf (buf, sizeof(buf), fmt, args);
+#else
+    (void) vsnprintf (buf, sizeof(buf), fmt, args);
+#endif
+    va_end(args);
+    glutBitmapString ( GLUT_BITMAP_HELVETICA_12, (unsigned char*)buf ) ;
+}
+
 void display_cb ( void )
 {
-  char string [ 80 ] ;
-
   glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) ;
 
   glColor3d ( 1.0, 1.0, 1.0 ) ;  /* White */
@@ -257,9 +281,8 @@ void display_cb ( void )
 
   /* Print the distance between the two points */
   glColor3d ( 1.0, 1.0, 1.0 ) ;  /* White */
-  sprintf ( string, "Distance: %10.6f", distance ) ;
-  glRasterPos2i ( 10, 10 ) ;
-  glutBitmapString ( GLUT_BITMAP_HELVETICA_12, (unsigned char*)string ) ;
+  glRasterPos2i ( 1, 1 ) ;
+  bitmapPrintf ( "Distance: %10.6f", distance ) ;
 
   glutSwapBuffers();
 }
@@ -346,7 +369,7 @@ int main ( int argc, char *argv[] )
   /* Enter the GLUT main loop */
   glutMainLoop () ;
 
-#ifdef WIN32
+#ifdef _MSC_VER
   /* DUMP MEMORY LEAK INFORMATION */
   _CrtDumpMemoryLeaks () ;
 #endif

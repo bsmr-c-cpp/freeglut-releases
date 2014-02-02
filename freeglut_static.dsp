@@ -125,6 +125,10 @@ SOURCE=.\src\freeglut_init.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\freeglut_input_devices.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\freeglut_joystick.c
 # End Source File
 # Begin Source File
@@ -142,6 +146,10 @@ SOURCE=.\src\freeglut_misc.c
 # Begin Source File
 
 SOURCE=.\src\freeglut_overlay.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\freeglut_spaceball.c
 # End Source File
 # Begin Source File
 
