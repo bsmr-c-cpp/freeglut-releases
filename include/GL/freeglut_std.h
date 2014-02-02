@@ -35,40 +35,69 @@
 /*
  * Under windows, we have to differentiate between static and dynamic libraries
  */
-#if defined(WIN32)
+#if defined(_MSC_VER) || defined(__CYGWIN__) || defined(__MINGW32__)
+
+/* #pragma may not be supported by some compilers.
+ * Discussion by FreeGLUT developers suggests that
+ * Visual C++ specific code involving pragmas may
+ * need to move to a separate header.  24th Dec 2003
+ */ 
+
+#   define WIN32_LEAN_AND_MEAN
+#   define NO_MIN_MAX
 #    include <windows.h>
-#    include <windowsx.h>
-#    include <mmsystem.h>
-#    define WINDOWS
-#ifdef FREEGLUT_STATIC
+#   undef min
+#   undef max
+
+/* Windows static library */
+#   ifdef FREEGLUT_STATIC
+
 #    define FGAPI
 #    define FGAPIENTRY
 
-#    pragma comment (lib, "freeglut_static.lib")    /* link with Win32 static freeglut lib */
+        /* Link with Win32 static freeglut lib */
+#       if defined(_MSC_VER)
+#           pragma comment (lib, "freeglut_static.lib")
+#       endif
 
-#else
+/* Windows shared library (DLL) */
+#   else
 
 #        if defined(FREEGLUT_EXPORTS)
 #                define FGAPI __declspec(dllexport)
-/* #                define FGAPI */
 #        else
 #                define FGAPI __declspec(dllimport)
-#   pragma comment (lib, "freeglut.lib")    /* link with Win32 freeglut lib */
+
+            /* link with Win32 shared freeglut lib */
+#           if defined(_MSC_VER)
+#               ifndef _WIN32_WCE
+#                   pragma comment (lib, "freeglut.lib")
+#               endif
 #        endif
-#        define FGAPIENTRY __stdcall
 
-#endif
+#       endif
 
-#pragma comment (lib, "winmm.lib")       /* link with Windows MultiMedia lib */
-#pragma comment (lib, "user32.lib") /* link with Windows user lib */
-#pragma comment (lib, "gdi32.lib") /* link with Windows GDI lib */
-#pragma comment (lib, "opengl32.lib")    /* link with Microsoft OpenGL lib */
-#pragma comment (lib, "glu32.lib")       /* link with OpenGL Utility lib */
+#       define FGAPIENTRY __stdcall
 
+#   endif
+
+/* Drag in other Windows libraries as required by FreeGLUT */
+#   if defined(_MSC_VER)
+#       ifndef _WIN32_WCE
+#           pragma comment (lib, "winmm.lib")    /* link Windows MultiMedia lib */
+#           pragma comment (lib, "user32.lib")   /* link Windows user lib       */
+#           pragma comment (lib, "gdi32.lib")    /* link Windows GDI lib        */
+#           pragma comment (lib, "opengl32.lib") /* link Microsoft OpenGL lib   */
+#           pragma comment (lib, "glu32.lib")    /* link OpenGL Utility lib     */
+#       endif /* _WIN32_WCE */
+#   endif
 
 #else
+
+/* Non-Windows definition of FGAPI and FGAPIENTRY  */
 #        define FGAPI
 #        define FGAPIENTRY
+
 #endif
 
 /*
@@ -77,6 +106,7 @@
 #define  FREEGLUT             1
 #define  GLUT_API_VERSION     4
 #define  FREEGLUT_VERSION_2_0 1
+#define  GLUT_XLIB_IMPLEMENTATION 13
 
 /*
  * Always include OpenGL and GLU headers
@@ -153,7 +183,7 @@
  *
  * Steve Baker suggested to make it binary compatible with GLUT:
  */
-#if defined(WIN32)
+#if defined(_MSC_VER) || defined(__CYGWIN__) || defined(__MINGW32__)
 #   define  GLUT_STROKE_ROMAN               ((void *)0x0000)
 #   define  GLUT_STROKE_MONO_ROMAN          ((void *)0x0001)
 #   define  GLUT_BITMAP_9_BY_15             ((void *)0x0002)
@@ -528,7 +558,7 @@ FGAPI void    FGAPIENTRY glutCopyColormap( int window );
  * Misc keyboard and joystick functions, see freeglut_misc.c
  */
 FGAPI void    FGAPIENTRY glutIgnoreKeyRepeat( int ignore );
-FGAPI void    FGAPIENTRY glutSetKeyRepeat( int repeatMode );  /* DEPRECATED 11/4/02 - Do not use */
+FGAPI void    FGAPIENTRY glutSetKeyRepeat( int repeatMode );
 FGAPI void    FGAPIENTRY glutForceJoystickFunc( void );
 
 /*

@@ -46,6 +46,14 @@
 #define GLUT_USE_CURRENT_CONTEXT                 1
 
 /*
+ * Direct/Indirect rendering context options (has meaning only in Unix/X11)
+ */
+#define GLUT_FORCE_INDIRECT_CONTEXT              0
+#define GLUT_ALLOW_DIRECT_CONTEXT                1
+#define GLUT_TRY_DIRECT_CONTEXT                  2
+#define GLUT_FORCE_DIRECT_CONTEXT                3
+
+/*
  * GLUT API Extension macro definitions -- the glutGet parameters
  */
 #define  GLUT_ACTION_ON_WINDOW_CLOSE        0x01F9
@@ -56,6 +64,17 @@
 #define  GLUT_VERSION                       0x01FC
 
 #define  GLUT_RENDERING_CONTEXT             0x01FD
+#define  GLUT_DIRECT_RENDERING              0x01FE
+
+/*
+ * New tokens for glutInitDisplayMode.
+ * Only one GLUT_AUXn bit may be used at a time.
+ * Value 0x0400 is defined in OpenGLUT.
+ */
+#define  GLUT_AUX1                          0x1000
+#define  GLUT_AUX2                          0x2000
+#define  GLUT_AUX3                          0x4000
+#define  GLUT_AUX4                          0x8000
 
 /*
  * Process loop function, see freeglut_main.c
@@ -103,7 +122,8 @@ FGAPI void    FGAPIENTRY glutSolidCylinder( GLdouble radius, GLdouble height, GL
 /*
  * Extension functions, see freeglut_ext.c
  */
-FGAPI void * FGAPIENTRY glutGetProcAddress( const char *procName );
+typedef void (*GLUTproc)();
+FGAPI GLUTproc FGAPIENTRY glutGetProcAddress( const char *procName );
 
 
 #ifdef __cplusplus
